@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <!-- Bootstrap -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+
+        <!-- Fonts e ícones -->
+        <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Righteous&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap" rel="stylesheet">
+        <script src="https://kit.fontawesome.com/8c452e77e4.js" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+        <title>NoXP - Soluções e tecnologia para seu negócio</title>
+
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='estilos.css')}}">
+</head>
+<body>
+    <header class="col-12">
+        <div class="col-12">
+            <nav class="col-12">
+                <ul class="col-12">
+                    <li class="menu_apps col-4" id="logo">
+                        <a href="{{url_for('index')}}">
+                            <span id="noxp">NoXP</span> <span id="rooms">Rooms</span>
+                        </a> 
+                    </li>
+                    <li class="menu_apps col-2">
+                      <a href="{{url_for('quartos')}}">QUARTOS</a>
+                    </li>
+                    <li class="menu_apps col-2">
+                        <a href="{{url_for('hospedes')}}">HOSPEDES</a>
+                    </li>
+                    <li class="menu_apps col-2">
+                        <a href="{{url_for('configuracoes')}}">CONFIGURAÇÕES</a>
+                    </li>
+                    <li class="menu_apps col-2">
+                        <a href="{{url_for('financeiro')}}">FINANCEIRO</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <section class="secao_main col-12" id="reservas">
+            <div class="col-12 bloco_main float-start">
+                <h4>pagamento {{pagamento['id_pagamento']}}</h4>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                <div class="col-8 float-start bloco_quarto">
+                    <h5>dados do pagamento</h5>
+                    <div class="col-12">
+                        <div class="form_imput p-2 float-start col-3">
+                            <span class="text-left">Nº do pagamento:</span>
+                            <input readonly class="form-control form-control-md" type="number" 
+                            name="id_pagamento" min="0" placeholder="123" value="{{pagamento['id_pagamento']}}">
+                        </div>
+                        <div class="form_imput p-2 float-start col-9">
+                            <span class="text-left">Hospede:</span>
+                            <input readonly class="form-control form-control-md" type="text" 
+                            name="pagador" value="{{pagador['nome']}}" placeholder="123">
+                        </div>
+                        <div class="form_imput p-2 float-start col-6">
+                            <span class="text-left">Checkin:</span>
+                            <input readonly class="form-control form-control-md" type="date" 
+                            name="datacheckin" value="{{hospedagem['datacheckin'].strftime('%Y-%m-%d')}}" placeholder="123">
+                        </div>
+                        <div class="form_imput p-2 float-start col-6">
+                            <span class="text-left">Checkout:</span>
+                            <input class="form-control form-control-md" type="date" 
+                            name="datacheckout" value="{{hospedagem['datacheckout'].strftime('%Y-%m-%d')}}" 
+                            min="{{hoje.strftime('%Y-%m-%d')}}">
+                        </div>
+                        <div class="form_imput p-2 float-start col-3">
+                            <span class="text-left">valor diária:</span>
+                            <input readonly class="form-control form-control-md" type="number" step=".01" 
+                            name="valor" min="0" max="99999" value="{{hospedagem['valordiaria']}}" placeholder="R$100,00">
+                        </div>
+                        <div class="form_imput p-2 float-start col-3">
+                            <span class="text-left">Valor Hospedagem:</span>
+                            <input readonly class="form-control form-control-md" type="number" step=".01" 
+                            name="valordesconto" min="0" max="99999" value="{{hospedagem['valortotal']}}" placeholder="R$100,00">
+                        </div>
+                        <div class="form_imput p-2 float-start col-3">
+                            <span class="text-left">Valor Desconto:</span>
+                            <input readonly class="form-control form-control-md" type="number" step=".01" 
+                            name="valortotal" min="0" max="99999" value="{{hospedagem['valordesconto']}}" placeholder="R$100,00">
+                        </div>
+                        <div class="form_imput p-2 float-start col-3">
+                            <span class="text-left">Valor Bruto:</span>
+                            <input readonly class="form-control form-control-md" type="number" step=".01" 
+                            name="valortotal" min="0" max="99999" value="{{pagamento['valorbruto']}}" placeholder="R$100,00">
+                        </div>
+                        <div class="form_imput p-2 float-start col-3">
+                            <span class="text-left">Valor Liquido:</span>
+                            <input readonly class="form-control form-control-md" type="number" step=".01" 
+                            name="valortotal" min="0" max="99999" value="{{pagamento['valorliquido']}}" placeholder="R$100,00">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4 float-start bloco_quarto">
+                    <h5>Serviços</h5>
+                    <div class="col-12">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">servico</th>
+                                    <th scope="col">quantidade</th>
+                                    <th scope="col">valor</th>
+                                    <th scope="col">X</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for servico in servicos %}
+                                <form action="{{url_for('exclui_servico')}}" method="post">
+                                    <tr>
+                                        <td>{{servico['descricao']}}</td>
+                                        <td>{{servico['quantidade']}}</td>
+                                        <td>{{servico['valor']}}</td>
+                                        <td>
+                                            <input type="hidden" name="id_servicohospedagem" value="{{servico['id_servicohospedagem']}}">
+                                            <button {% if hospedagem['status'] != 'A' %} disabled {% endif %} type="submit" class="btn btn-danger btn-md"><span class="material-symbols-outlined">
+                                                delete
+                                                </span></button>
+                                        </td>
+                                    </tr>
+                                </form>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-4 float-start bloco_quarto">
+                        <table class="table">
+                            <tbody>
+                                <tr>
+                                    <td>Total Serviços:</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td>R${{valor_servicos}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 botoes_base secao_main bloco_main">
+                <div class="col-3 float-start text-center">
+                    <input type="hidden" name="id_pagamento" value="{{pagamento['id_pagamento']}}"> 
+                    <button {% if pagamento['status'] == 'Q' or pagamento['status'] == 'C' %} disabled {% endif %} type="submit" class="btn btn-md btn-success" data-bs-toggle="modal" data-bs-target="#confirma_pagto_form">
+                        Confirmar pagamento (baixa)
+                    </button>
+                    <!-- Modal -->
+                    <div class="modal fade" id="confirma_pagto_form" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="confirma_pagto_form" aria-hidden="true">
+                        <div class="modal-dialog modal-md">
+                            <form action="{{url_for('baixa_pagamento')}}" method="post" autocomplete="off">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="confirma_pagto_form_title">Confirmar pagamento</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="col-12">
+                                            <div class="col-6 form_imput p-2 float-start">
+                                                <label for="forma" class="form-label float-start">Forma de pagamento:</label>
+                                                <select required class="form-control form-control-md" id="forma" name="forma" placeholder="forma de pagamento">
+                                                    {% for forma in formas %}
+                                                        <option value="{{forma['id_formapagto']}}">{{forma['descricao']}}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <input type="hidden" name="id_pagamento" value="{{pagamento['id_pagamento']}}"> 
+                                            </div>
+                                            <div class="col-6 form_imput p-2 float-start">
+                                                <label for="cond" class="form-label float-start">Condição de pagamento:</label>
+                                                <select required class="form-control form-control-md" id="cond" name="cond" placeholder="condição de pagamento">
+                                                    {% for cond in condicoes %}
+                                                        <option value="{{cond['id_condpagto']}}">{{cond['descricao']}}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <input type="hidden" name="id_pagamento" value="{{pagamento['id_pagamento']}}"> 
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancelar</button>
+                                        <input type="submit" class="btn btn-success" value="Confirmar pagamento">
+                                    </div>
+                                </div>
+                            </form>                            
+                        </div>
+                    </div>
+                </div>
+                <div class="col-3 float-start text-center">
+                    <!-- Button trigger modal -->
+                    <button {% if pagamento['status'] != 'Q' or permite_estorno == 'N' %} disabled {% endif %} type="button" class="btn btn-md btn-dark" data-bs-toggle="modal" data-bs-target="#estorna_pagto_form">
+                        Estorna pagamento
+                    </button>
+                    
+                    <!-- Modal -->
+                    <div class="modal fade" id="estorna_pagto_form" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="estorna_pagto_form" aria-hidden="true">
+                        <div class="modal-dialog modal-md">
+                            <form action="{{url_for('estorna_pagamento')}}" method="post" autocomplete="off">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="estorna_pagto_form_title">Estornar pagamento</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="col-12">
+                                            <div class="col-12 form_imput p-2 float-start">
+                                                <label for="motivo" class="form-label float-start">Motivo:</label>
+                                                <input required minlength="10" class="form-control form-control-md" id="motivo" type="text" name="motivo" placeholder="motivo">
+                                                <input type="hidden" name="id_pagamento" value="{{pagamento['id_pagamento']}}"> 
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancelar</button>
+                                        <input type="submit" class="btn btn-success" value="Estornar pagamento">
+                                    </div>
+                                </div>
+                            </form>                            
+                        </div>
+                    </div>
+                </div>
+                <div class="col-3 float-start text-center">
+                    <a class="btn btn-outline-dark btn-md" href="{{url_for('hospedagem', id_hospedagem=hospedagem['id_hospedagem'])}}">
+                        Ver Hospedagem
+                    </a>
+                </div>
+                <div class="col-3 float-start text-center">
+                    <!-- Button trigger modal -->
+                    <button {% if pagamento['status'] != 'A' or permite_cancelar == 'N' %} disabled {% endif %} type="button" class="btn btn-md btn-danger" data-bs-toggle="modal" data-bs-target="#cancela_pagto_form">
+                        Cancelar pagamento
+                    </button>
+                    
+                    <!-- Modal -->
+                    <div class="modal fade" id="cancela_pagto_form" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="cancela_pagto_form" aria-hidden="true">
+                        <div class="modal-dialog modal-md">
+                            <form action="{{url_for('cancela_pagamento')}}" method="post" autocomplete="off">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="cancela_pagto_form_title">Cancelar pagamento</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="col-12">
+                                            <div class="col-12 form_imput p-2 float-start">
+                                                <label for="motivo" class="form-label float-start">Motivo:</label>
+                                                <input required minlength="10" class="form-control form-control-md" id="motivo" type="text" name="motivo" placeholder="motivo">
+                                                <input type="hidden" name="id_pagamento" value="{{pagamento['id_pagamento']}}"> 
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancelar</button>
+                                        <input type="submit" class="btn btn-success" value="Cancelar pagamento">
+                                    </div>
+                                </div>
+                            </form>                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <footer class="col-12">
+    </footer>
+</body>
+</html>

@@ -1,0 +1,119 @@
+body{
+   background-color: #d9d9d9;
+}
+header{
+    background-color: #fff;
+    box-shadow: 2px 3px 6px #999;
+    float: left;
+}
+header ul{
+    float: left;
+    margin: auto;
+}
+#logo{
+    background: -webkit-linear-gradient(rgb(255, 77, 0),rgb(117, 72, 0));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-family: 'Fredoka One', sans-serif;
+}
+#noxp{
+    font-size: 1em;
+    background: -webkit-linear-gradient(#333,#666);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-family: 'Fredoka One', sans-serif;
+}
+#rooms{
+    font-size: 1.5em;
+}
+header ul li{
+    float: left;
+    list-style: none;
+    text-align: center;
+    padding: 1%;
+}
+.secao_main{
+    float: left;
+    padding: 2%;
+    text-align: center;
+    height: 300px;
+}
+.bloco_main{
+    float: left;
+    background-color: #fff;
+    box-shadow: 2px 3px 6px #999;
+    border: 1px solid #999;
+    border-radius: 12px;
+    padding: 2%;
+}
+.reserva{
+    padding: 1%;
+    float: left;
+    font-size: 0.9em;
+    font-family: Helvetica, Arial, sans-serif;
+    border-top: 1px solid #999;
+    list-style: none;
+}
+.reserva span{
+    font-size: 1em;
+}
+.bloco_quarto{
+    padding: 1%;
+}
+.quarto{
+    padding: 2%;
+    border-radius: 8px;
+}
+.quarto .num_quarto{
+    font-size: 2em;
+    background: -webkit-linear-gradient(#333,#666);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-family: 'Fredoka One', sans-serif;
+    margin: 0, 0;
+    text-align: left;
+}
+.quarto_livre{
+    border-top: 2px seagreen solid;
+    border-right: 2px seagreen solid;
+    border-bottom: 2px seagreen solid;
+    border-left: 4px seagreen solid;
+}
+.quarto_ocupado{
+    border-top: 2px red solid;
+    border-right: 2px red solid;
+    border-bottom: 2px red solid;
+    border-left: 4px red solid;
+}
+.form_input{
+    float: left;
+}
+.botoes_base{
+    float: left;
+    padding-top: 4%;
+}
+#lista_hospedes{
+    max-height: 420px;
+    overflow-y: scroll;
+}
+#lista_quartos{
+    max-height: 420px;
+    overflow-y: scroll;
+}
+.bloco_config{
+    height: 300px;
+    overflow-y: scroll;
+}
+.servico_add{
+    overflow-y: scroll;
+    height: 150px;
+    border-bottom: 1px solid #666;
+}
+.bloco_lista{
+    height: 300px;
+    overflow-y: scroll;
+    margin-bottom: 5%;
+}
+h4 span{
+    font-size: 0.75em;
+}

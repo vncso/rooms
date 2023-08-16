@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <!-- Bootstrap -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+
+        <!-- Fonts e ícones -->
+        <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Righteous&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap" rel="stylesheet">
+        <script src="https://kit.fontawesome.com/8c452e77e4.js" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+        <title>NoXP - Soluções e tecnologia para seu negócio</title>
+
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='estilos.css')}}">
+</head>
+<body>
+    <header class="col-12">
+        <div class="col-12">
+            <nav class="col-12">
+                <ul class="col-12">
+                    <li class="menu_apps col-4" id="logo">
+                        <a href="{{url_for('index')}}">
+                            <span id="noxp">NoXP</span> <span id="rooms">Rooms</span>
+                        </a> 
+                    </li>
+                    <li class="menu_apps col-2">
+                      <a href="{{url_for('quartos')}}">QUARTOS</a>
+                    </li>
+                    <li class="menu_apps col-2">
+                        <a href="{{url_for('hospedes')}}">HOSPEDES</a>
+                    </li>
+                    <li class="menu_apps col-2">
+                        <a href="{{url_for('configuracoes')}}">CONFIGURAÇÕES</a>
+                    </li>
+                    <li class="menu_apps col-2">
+                        <a href="{{url_for('financeiro')}}">FINANCEIRO</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <section class="secao_main col-12" id="reservas">
+            <div class="col-12 bloco_main">
+                <h4>Hospedes</h4>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                <div class="col-12" id="lista_hospedes">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Nome</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">cod. interno</th>
+                                <th scope="col">CPF</th>
+                                <th scope="col">data nasc.</th>
+                                <th scope="col">hospedado?</th>
+                                <th scope="col">reserva?</th>
+                                <th scope="col">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for hospede in busca %}
+                                <tr>
+                                    <td>{{hospede['nome']}}</td>
+                                    <td>{{hospede['status']}}</td>
+                                    <td>{{hospede['codinterno']}}</td>
+                                    <td>{{hospede['cpf']}}</td>
+                                    <td>{{hospede['datanasc'].strftime('%d/%m/%Y')}}</td>
+                                    
+                                    <td>{{hospede['hospedagem']}}</td>
+                                    <td>{{hospede['reserva']}}</td>
+                                    <td>
+                                        <a href="{{url_for('hospede', id_hospede=hospede['id_hospede'])}}" class="btn btn-sm btn-info"><span class="material-symbols-outlined">edit_note</span></a>
+                                        <a href="{{url_for('hospede', id_hospede=hospede['id_hospede'])}}" class="btn btn-sm btn-outline-dark">reservar</a>
+                                        <a href="{{url_for('hospede', id_hospede=hospede['id_hospede'])}}" class="btn btn-sm btn-success">hospedar</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                      </table>
+                </div>
+                <div class="col-6 float-start">
+                    <!-- Button trigger modal -->
+                    <button type="button" class="btn btn-block btn-success" data-bs-toggle="modal" data-bs-target="#cad_hospede_form">
+                        Cadastrar novo Hospede
+                    </button>
+                    
+                    <!-- Modal -->
+                    <div class="modal fade" id="cad_hospede_form" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="cad_hospede_form" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <form action="{{url_for('cadastra_hospede')}}" method="post" autocomplete="off">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="cad_hospede_form_title">Cadastrar Hospede</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="col-12">
+                                            <div class="col-8 form_imput p-2 float-start">
+                                                <label for="nome" class="form-label float-start">Nome:</label>
+                                                <input required class="form-control form-control-md" id="nome" type="text" 
+                                                name="nome" placeholder="Nome Completo" value="{% if dados['nome'] %}{{dados['nome']}}{% endif %}">
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-4">
+                                                <label for="apelido" class="form-label float-start">Apelido:</label>
+                                                <input id="apelido" class="form-control form-control-md" type="text" 
+                                                name="apelido" placeholder="Apelido" value="{% if dados['apelido'] %}{{dados['apelido']}}{% endif %}">
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-3">
+                                                <label for="codinterno" class="form-label float-start">Cod. Interno:</label>
+                                                <input id="codinterno" class="form-control form-control-md" type="number" 
+                                                name="codinterno" placeholder="1234" value="{% if dados['codinterno'] %}{{dados['codinterno']}}{% endif %}">
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-3">
+                                                <label for="datanasc" class="form-label float-start">Data nasc.:</label>
+                                                <input required id="datanasc" class="form-control form-control-md" type="date" 
+                                                name="datanasc" placeholder="12/06/1998" value="{% if dados['datanasc'] %}{{dados['datanasc'].strftime('%m/%d/%Y')}}{% endif %}">
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-6">
+                                                <label for="cargo" class="form-label float-start">Cargo:</label>
+                                                <input id="cargo" class="form-control form-control-md" type="text" 
+                                                name="cargo" placeholder="Cargo/Profissão" value="{% if dados['cargo'] %}{{dados['cargo']}}{% endif %}">
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-4">
+                                                <label for="tipohospede" class="form-label float-start">Tipo Hospede:</label>
+                                                <select required id="tipohospede" class="form-control form-control-md" name="tipohospede">
+                                                    {% for tipo in lista_tipo_hospede %}
+                                                        <option {% if dados['tipohospede'] == tipo['id_tipohospede'] %}selected{% endif %} value="{{tipo['id_tipohospede']}}">{{tipo['descricao']}}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-4">
+                                                <label for="cpf" class="form-label float-start">CPF:</label>
+                                                <input required id="cpf" class="form-control form-control-md" type="number" 
+                                                min="0" maxlength="11" max="99999999999" name="cpf" placeholder="apenas numeros" 
+                                                value="{% if dados['cpf'] %}{{dados['cpf']}}{% endif %}">
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-4">
+                                                <label for="rg" class="form-label float-start">RG:</label>
+                                                <input id="rg" class="form-control form-control-md" type="number" 
+                                                maxlength="11" min="0" max="99999999999" name="rg" placeholder="apenas numeros" 
+                                                value="{% if dados['rg'] %}{{dados['rg']}}{% endif %}">
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-12">
+                                                dados de contato
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-3">
+                                                <label for="tel1" class="form-label float-start">telefone 1:</label>
+                                                <input required id="tel1" class="form-control form-control-md" type="tel" 
+                                                name="tel1" placeholder="19 9 8888-8888" value="{% if dados['tel1'] %}{{dados['tel1']}}{% endif %}">
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-3">
+                                                <label for="tel2" class="form-label float-start">telefone 2:</label>
+                                                <input id="tel2" class="form-control form-control-md" type="tel" 
+                                                name="tel2" placeholder="19 9 9999-9999" value="{% if dados['tel2'] %}{{dados['tel2']}}{% endif %}">
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-6">
+                                                <label for="email" class="form-label float-start">e-mail:</label>
+                                                <input required id="email" class="form-control form-control-md" type="email" 
+                                                name="email" placeholder="hospede@rooms.com.br" value="{% if dados['email'] != False %}{{dados['email']}}{% endif %}">
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-9">
+                                                <label for="rua" class="form-label float-start">Rua:</label>
+                                                <input required id="rua" class="form-control form-control-md" type="text" 
+                                                name="rua" placeholder="Rua do Exemplo" value="{% if dados['rua'] %}{{dados['rua']}}{% endif %}">
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-3">
+                                                <label for="numero" class="form-label float-start">Nº:</label>
+                                                <input required id="numero" class="form-control form-control-md" type="number" 
+                                                min="0" max="999999" name="numero" placeholder="12345" 
+                                                value="{% if dados['numero'] %}{{dados['numero']}}{% endif %}">
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-4">
+                                                <label for="bairro" class="form-label float-start">Bairro:</label>
+                                                <input required id="bairro" class="form-control form-control-md" type="text" 
+                                                name="bairro" placeholder="Centro" value="{% if dados['bairro'] %}{{dados['bairro']}}{% endif %}">
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-4">
+                                                <label for="cidade" class="form-label float-start">Cidade:</label>
+                                                <select required type="text" id="cidade" name="cidade" 
+                                                    placeholder="Para qual cidade é a vaga?" 
+                                                    class="col-12 form-control form-control-md float-start">
+                                                    {% if dados['cidade'] %}<option selected value="{{dados['cidade']}}">{{dados['cidade']}}</option>{% endif %}
+                                                </select>
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-3">
+                                                <label for="uf" class="form-label float-start">UF:</label>
+                                                <select required id="uf" onchange="buscaCidades(this.value)" name="uf" class="col-12 form-control form-control-md float-start campo-form">
+                                                    <option {% if dados['uf'] == 'AC' %}selected{% endif %} value="AC">Acre</option>
+                                                <option {% if dados['uf'] == 'AL' %}selected{% endif %} value="AL">Alagoas</option>
+                                                <option {% if dados['uf'] == 'AP' %}selected{% endif %} value="AP">Amapá</option>
+                                                <option {% if dados['uf'] == 'AM' %}selected{% endif %} value="AM">Amazonas</option>
+                                                <option {% if dados['uf'] == 'BA' %}selected{% endif %} value="BA">Bahia</option>
+                                                <option {% if dados['uf'] == 'CE' %}selected{% endif %} value="CE">Ceará</option>
+                                                <option {% if dados['uf'] == 'DF' %}selected{% endif %} value="DF">Distrito Federal</option>
+                                                <option {% if dados['uf'] == 'ES' %}selected{% endif %} value="ES">Espírito Santo</option>
+                                                <option {% if dados['uf'] == 'GO' %}selected{% endif %} value="GO">Goiás</option>
+                                                <option {% if dados['uf'] == 'MA' %}selected{% endif %} value="MA">Maranhão</option>
+                                                <option {% if dados['uf'] == 'MT' %}selected{% endif %} value="MT">Mato Grosso</option>
+                                                <option {% if dados['uf'] == 'MS' %}selected{% endif %} value="MS">Mato Grosso do Sul</option>
+                                                <option {% if dados['uf'] == 'MG' %}selected{% endif %} value="MG">Minas Gerais</option>
+                                                <option {% if dados['uf'] == 'PA' %}selected{% endif %} value="PA">Pará</option>
+                                                <option {% if dados['uf'] == 'PB' %}selected{% endif %} value="PB">Paraíba</option>
+                                                <option {% if dados['uf'] == 'PR' %}selected{% endif %} value="PR">Paraná</option>
+                                                <option {% if dados['uf'] == 'PE' %}selected{% endif %} value="PE">Pernambuco</option>
+                                                <option {% if dados['uf'] == 'PI' %}selected{% endif %} value="PI">Piauí</option>
+                                                <option {% if dados['uf'] == 'RJ' %}selected{% endif %} value="RJ">Rio de Janeiro</option>
+                                                <option {% if dados['uf'] == 'RN' %}selected{% endif %} value="RN">Rio Grande do Norte</option>
+                                                <option {% if dados['uf'] == 'RS' %}selected{% endif %} value="RS">Rio Grande do Sul</option>
+                                                <option {% if dados['uf'] == 'RO' %}selected{% endif %} value="RO">Rondônia</option>
+                                                <option {% if dados['uf'] == 'RR' %}selected{% endif %} value="RR">Roraima</option>
+                                                <option {% if dados['uf'] == 'SC' %}selected{% endif %} value="SC">Santa Catarina</option>
+                                                <option {% if dados['uf'] == 'SP' %}selected{% endif %} value="SP">São Paulo</option>
+                                                <option {% if dados['uf'] == 'SE' %}selected{% endif %} value="SE">Sergipe</option>
+                                                <option {% if dados['uf'] == 'TO' %}selected{% endif %} value="TO">Tocantins</option>
+                                            </select>
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-3">
+                                                <label for="cep" class="form-label float-start">CEP:</label>
+                                                <input id="cep" class="form-control form-control-md" type="number" 
+                                                min="0" max="99999999" name="cep" placeholder="apenas numeros" 
+                                                value="{% if dados['cep'] %}{{dados['cep']}}{% endif %}">
+                                            </div>
+                                            <div class="form_imput p-2 float-start col-9">
+                                                <label for="complemento" class="form-label float-start">Complemento:</label>
+                                                <input id="complemento" class="form-control form-control-md" maxlength="45" 
+                                                type="text" name="complemento" placeholder="complemento" 
+                                                value="{% if dados['complemento'] %}{{dados['complemento']}}{% endif %}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancelar</button>
+                                        <input type="submit" class="btn btn-success" value="Cadastrar usuário">
+                                    </div>
+                                </div>
+                            </form>
+                            <script type="text/javascript" src="{{url_for('static', filename='misc.js')}}"></script>
+                            <script>
+                                function buscaCidades(e){
+                                document.querySelector("#cidade").innerHTML = '';
+                                var cidade_select = document.querySelector("#cidade");
+
+                                var num_estados = json_cidades.estados.length;
+                                var j_index = -1;
+
+                                // aqui eu pego o index do Estado dentro do JSON
+                                for(var x=0;x<num_estados;x++){
+                                    if(json_cidades.estados[x].sigla == e){
+                                        j_index = x;
+                                    }
+                                }
+
+                                if(j_index != -1){
+
+                                    // aqui eu percorro todas as cidades e crio os OPTIONS
+                                    json_cidades.estados[j_index].cidades.forEach(function(cidade){
+                                        var cid_opts = document.createElement('option');
+                                        cid_opts.setAttribute('value',cidade)
+                                        cid_opts.innerHTML = cidade;
+                                        cidade_select.appendChild(cid_opts);
+                                    });
+                                }else{
+                                    document.querySelector("#cidade").innerHTML = '';
+                                }
+                                }
+                                (function(){
+                                    var today = new Date();
+                                    var dd = today.getDate();
+                                    var mm = today.getMonth()+1; //January is 0!
+                                    var yyyy = today.getFullYear();
+                                    if(dd<10){
+                                            dd='0'+dd
+                                        }
+                                        if(mm<10){
+                                            mm='0'+mm
+                                        }
+
+                                    today = yyyy+'-'+mm+'-'+dd;
+                                    document.getElementById("prazo").setAttribute("min", today);
+                                })();
+                            </script>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 float-start">
+                    <!-- Button trigger modal -->
+                    <button type="button" class="btn btn-block btn-outline-dark" data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+                        pesquisa Hospede
+                    </button>
+                    
+                    <!-- Modal -->
+                    <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <form action="{{url_for('busca_hospede')}}" method="post" autocomplete="off">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="staticBackdropLabel">Pesquisar Hospede</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="col-12 p-2 float-start">
+                                            <label for="nome" class="form-label float-start">Nome:</label>
+                                            <input class="form-control form-control-md" id="nome" type="text" 
+                                            name="nome" placeholder="Nome Completo">
+                                        </div>
+                                        <div class="form_imput p-2 float-start col-4">
+                                            <label for="codinterno" class="form-label float-start">Cod. Interno:</label>
+                                            <input id="codinterno" class="form-control form-control-md" type="number" 
+                                            name="codinterno" placeholder="1234">
+                                        </div>
+                                        <div class="form_imput p-2 float-start col-4">
+                                            <label for="empresa" class="form-label float-start">Empresa:</label>
+                                            <select id="empresa" class="form-control form-control-md" name="empresa">
+                                                {% for empresa in lista_empresa %}
+                                                    <option  value="{{empresa['id_empresa']}}">{{empresa['nome']}}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="form_imput p-2 float-start col-4">
+                                            <label for="tipohospede" class="form-label float-start">Tipo Hospede:</label>
+                                            <select id="tipohospede" class="form-control form-control-md" name="tipohospede">
+                                                {% for tipo in lista_tipo_hospede %}
+                                                    <option value="{{tipo['id_tipohospede']}}">{{tipo['descricao']}}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="form_imput p-2 float-start col-6">
+                                            <label for="cpf" class="form-label float-start">CPF:</label>
+                                            <input id="cpf" class="form-control form-control-md" type="number" 
+                                            min="0" max="99999999999" name="cpf" placeholder="apenas numeros">
+                                        </div>
+                                        <div class="form_imput p-2 float-start col-6">
+                                            <label for="rg" class="form-label float-start">RG:</label>
+                                            <input id="rg" class="form-control form-control-md" type="number" 
+                                            min="0" max="99999999999" name="rg" placeholder="apenas numeros">
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                                        <button type="submit" class="btn btn-info">pesquisar</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div> 
+            </div>
+        </section>
+    </main>
+    <footer class="col-12">
+    </footer>
+</body>
+</html>

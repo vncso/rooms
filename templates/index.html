@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <!-- Bootstrap -->
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+        <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+        <!-- Fonts e ícones -->
+        <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Righteous&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap" rel="stylesheet">
+        <script src="https://kit.fontawesome.com/8c452e77e4.js" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+        <title>NoXP - Soluções e tecnologia para seu negócio</title>
+
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='estilos.css')}}">
+</head>
+<body>
+    <header class="col-12">
+        <div class="col-12">
+            <nav class="col-12">
+                <ul class="col-12">
+                    <li class="menu_apps col-2" id="logo">
+                        <a href="{{url_for('index')}}">
+                            <span id="noxp">NoXP</span> <span id="rooms">Rooms</span>
+                        </a> 
+                    </li>
+                    <li class="menu_apps col-2">
+                      <a href="{{url_for('calendario', mes=mes_atual, ano=ano_atual)}}">CALENDÁRIO</a>
+                    </li>
+                    <li class="menu_apps col-2">
+                      <a href="{{url_for('quartos')}}">QUARTOS</a>
+                    </li>
+                    <li class="menu_apps col-2">
+                        <a href="{{url_for('hospedes')}}">HOSPEDES</a>
+                    </li>
+                    <li class="menu_apps col-2">
+                        <a href="{{url_for('configuracoes')}}">CONFIGURAÇÕES</a>
+                    </li>
+                    <li class="menu_apps col-2">
+                        <a href="{{url_for('financeiro')}}">FINANCEIRO</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <section class="secao_main col-6" id="reservas">
+            <div class="col-12 bloco_main">
+                <h4>Reservas</h4>
+                <div class="col-12">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Hospede</th>
+                                <th scope="col">Quarto</th>
+                                <th scope="col">Checkin</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reserva in reservas %}
+                            <tr>
+                                <td>{{reserva['nome']}}</td>
+                                <td>{{reserva['nroquarto']}}</td>
+                                <td>{{reserva['datacheckin'].strftime('%d/%m/%Y')}}</td>
+                                <td><a class="btn btn-sm btn-info" href="{{url_for('reserva', id_reserva=reserva['id_reserva'])}}">
+                                    <span class="material-symbols-outlined">
+                                        edit_note</span>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                      </table>
+                </div>
+                <div class="col-12 float-left">
+                    <a href="{{url_for('reservas')}}" class="btn btn-block btn-outline-dark">
+                        Ver todas as Reservas
+                    </a>
+                </div> 
+            </div>
+        </section>
+        <section class="secao_main col-6" id="hospedagens">
+            <div class="col-12 bloco_main">
+                <h4>Hospedagens</h4>
+                <div class="col-12">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Hospede</th>
+                                <th scope="col">Quarto</th>
+                                <th scope="col">Checkin</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for hospedagem in hospedagens %}
+                            <tr>
+                                <td>{{hospedagem['nome']}}</td>
+                                <td>{{hospedagem['nroquarto']}}</td>
+                                <td>{{hospedagem['datacheckin'].strftime('%d/%m/%Y')}}</td>
+                                <td>
+                                    <a class="btn btn-sm btn-info" href="{{url_for('hospedagem', id_hospedagem=hospedagem['id_hospedagem'])}}">
+                                        <span class="material-symbols-outlined">
+                                            edit_note
+                                        </span>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                      </table>
+                </div>
+                <div class="col-12 float-left">
+                    <a href="{{url_for('hospedagens')}}" class="btn btn-block btn-outline-dark">
+                        Ver todas as Hospedagens
+                    </a>
+                </div> 
+            </div>
+        </section>
+    </main>
+    <footer class="col-12">
+    </footer>
+</body>
+</html>

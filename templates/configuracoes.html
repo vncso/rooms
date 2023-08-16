@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <!-- Bootstrap -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+
+        <!-- Fonts e ícones -->
+        <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Righteous&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap" rel="stylesheet">
+        <script src="https://kit.fontawesome.com/8c452e77e4.js" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+        <title>NoXP - Soluções e tecnologia para seu negócio</title>
+
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='estilos.css')}}">
+</head>
+<body>
+    <header class="col-12">
+        <div class="col-12">
+            <nav class="col-12">
+                <ul class="col-12">
+                    <li class="menu_apps col-2" id="logo">
+                        <a href="{{url_for('index')}}">
+                            <span id="noxp">NoXP</span> <span id="rooms">Rooms</span>
+                        </a> 
+                    </li>
+                    <li class="menu_apps col-2">
+                      <a href="{{url_for('calendario', mes=mes_atual, ano=ano_atual)}}">CALENDÁRIO</a>
+                    </li>
+                    <li class="menu_apps col-2">
+                      <a href="{{url_for('quartos')}}">QUARTOS</a>
+                    </li>
+                    <li class="menu_apps col-2">
+                        <a href="{{url_for('hospedes')}}">HOSPEDES</a>
+                    </li>
+                    <li class="menu_apps col-2">
+                        <a href="{{url_for('configuracoes')}}">CONFIGURAÇÕES</a>
+                    </li>
+                    <li class="menu_apps col-2">
+                        <a href="{{url_for('financeiro')}}">FINANCEIRO</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <section class="secao_main col-12" id="reservas">
+            <div class="col-4 float-start p-2">
+                <div class="bloco_main col-12">
+                    <h4>Aplicações</h4>
+                    <div class="col-12 bloco_config">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">App</th>
+                                    <th scope="col">modulo</th>
+                                    <th scope="col">nivel</th>
+                                    <th scope="col">ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for app in apps %}
+                                <tr>
+                                    <form action="{{url_for('atualiza_app')}}" method="post">
+                                        <td>{{app['descricao']}}</td>
+                                        <td>{{app['id_modulo']}}</td>
+                                        <td>
+                                            <select class="form-control form-control-md" name="nivelacesso">
+                                                <option {% if app['nivelacesso'] == 1%}selected{%endif%}>1</option>
+                                                <option {% if app['nivelacesso'] == 2%}selected{%endif%}>2</option>
+                                                <option {% if app['nivelacesso'] == 3%}selected{%endif%}>3</option>
+                                                <option {% if app['nivelacesso'] == 4%}selected{%endif%}>4</option>
+                                                <option {% if app['nivelacesso'] == 5%}selected{%endif%}>5</option>
+                                            </select>
+                                            <input type="hidden" name="id_app" value="{{app['id_app']}}">
+                                        </td>
+                                        <td><button type="submit" class="btn btn-success">Salvar</button></td>
+                                    </form>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4 float-start p-2">
+                <div class="bloco_main col-12 p-2">
+                    <h4>Modulos</h4>
+                    <div class="col-12 bloco_config">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Modulo</th>
+                                    <th scope="col">cod.</th>
+                                    <th scope="col">nivel</th>
+                                    <th scope="col">ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for modulo in modulos %}
+                                <tr>
+                                    <form action="{{url_for('atualiza_modulo')}}" method="post">
+                                        <td>{{modulo['descricao']}}</td>
+                                        <td>{{modulo['id_modulo']}}</td>
+                                        <td>
+                                            <select class="form-control form-control-md" name="nivelacesso">
+                                                <option {% if modulo['nivelacesso'] == 1%}selected{%endif%}>1</option>
+                                                <option {% if modulo['nivelacesso'] == 2%}selected{%endif%}>2</option>
+                                                <option {% if modulo['nivelacesso'] == 3%}selected{%endif%}>3</option>
+                                                <option {% if modulo['nivelacesso'] == 4%}selected{%endif%}>4</option>
+                                                <option {% if modulo['nivelacesso'] == 5%}selected{%endif%}>5</option>
+                                            </select>
+                                            <input type="hidden" name="id_modulo" value="{{modulo['id_modulo']}}">
+                                        </td>
+                                        <td><button type="submit" class="btn btn-success">Salvar</button></td>
+                                    </form>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>  
+            </div>
+            <div class="col-4 float-start p-2">
+                <div class="bloco_main col-12 p-2">
+                    <h4>Perfis</h4>
+                    <div class="col-12 bloco_config">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Perfil</th>
+                                    <th scope="col">nivel</th>
+                                    <th scope="col">ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for perfil in perfis %}
+                                <tr>
+                                    <form action="{{url_for('atualiza_perfil')}}" method="post">
+                                        <td>{{perfil['descricao']}}</td>
+                                        <td>
+                                            <select class="form-control form-control-md" name="nivelacesso">
+                                                <option {% if perfil['nivelacesso'] == 1%}selected{%endif%}>1</option>
+                                                <option {% if perfil['nivelacesso'] == 2%}selected{%endif%}>2</option>
+                                                <option {% if perfil['nivelacesso'] == 3%}selected{%endif%}>3</option>
+                                                <option {% if perfil['nivelacesso'] == 4%}selected{%endif%}>4</option>
+                                                <option {% if perfil['nivelacesso'] == 5%}selected{%endif%}>5</option>
+                                            </select>
+                                            <input type="hidden" name="id_perfil" value="{{perfil['id_perfil']}}">
+                                        </td>
+                                        <td><button type="submit" class="btn btn-success">Salvar</button></td>
+                                    </form>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-6 float-left">
+                        <!-- Button trigger modal -->
+                        <button type="button" class="btn btn-block btn-outline-dark" data-bs-toggle="modal" data-bs-target="#cad_perfil_form">
+                            Novo Perfil
+                        </button>
+                        
+                        <!-- Modal -->
+                        <div class="modal fade" id="cad_perfil_form" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="cad_perfil_form" aria-hidden="true">
+                            <div class="modal-dialog modal-md">
+                                <form action="{{url_for('cadastra_perfil')}}" method="post" autocomplete="off">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="cad_perfil_formtitle">Cadastrar Perfil</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="col-12">
+                                                <div class="col-6 form_imput p-2 float-start">
+                                                    <label for="perfil" class="form-label float-start">Perfil:</label>
+                                                    <input required class="form-control form-control-md" id="perfil" type="text" name="perfil" placeholder="Perfil">
+                                                </div>
+                                                <div class="form_imput p-2 float-start col-6">
+                                                    <label for="nivelacesso" class="form-label float-start">nivel de acesso:</label>
+                                                    <select class="form-control form-control-md" id="nivelacesso" name="nivelacesso">
+                                                        <option value="1">1</option>
+                                                        <option value="2">2</option>
+                                                        <option value="3">3</option>
+                                                        <option value="4">4</option>
+                                                        <option value="5">5</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancelar</button>
+                                            <input type="submit" class="btn btn-success" value="Cadastrar Perfil">
+                                        </div>
+                                    </div>
+                                </form>                            
+                            </div>
+                        </div>
+                    </div> 
+                </div>  
+            </div>
+            <div class="col-6 float-start p-2">
+                <div class="bloco_main col-12 p-2">
+                    <h4>Tipo Hospede</h4>
+                    <div class="col-12 bloco_config">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Tipo</th>
+                                    <th scope="col">% desc.</th>
+                                    <th scope="col">R$ desc.</th>
+                                    <th scope="col">status</th>
+                                    <th scope="col">ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tipo_h in tipohospede %}
+                                <tr>
+                                    <form action="{{url_for('atualiza_tipohospede')}}" method="post">
+                                        <td>{{tipo_h['descricao']}}</td>
+                                        <td><input class="form-control form-control-md" type="number" name="perdesconto" step=".01" min="0" max="100" value="{{tipo_h['perdesconto']}}"></td>
+                                        <td><input class="form-control form-control-md" type="number" name="valordesconto" step=".01" min="0" max="9999" value="{{tipo_h['valordesconto']}}"></td>
+                                        <td>
+                                            <select class="form-control form-control-md" name="status">
+                                                <option {% if tipo_h['status'] == 'A'%}selected{%endif%} value="A">Ativo</option>
+                                                <option {% if tipo_h['status'] == 'I'%}selected{%endif%} value="I">Inativo</option>
+                                            </select>
+                                            <input type="hidden" name="id_tipohospede" value="{{tipo_h['id_tipohospede']}}">
+                                        </td>
+                                        <td><button type="submit" class="btn btn-success">Salvar</button></td>
+                                    </form>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-6 float-left">
+                        <!-- Button trigger modal -->
+                        <button type="button" class="btn btn-block btn-outline-dark" data-bs-toggle="modal" data-bs-target="#cad_tipohospede_form">
+                            Novo Tipo Hospede
+                        </button>
+                        
+                        <!-- Modal -->
+                        <div class="modal fade" id="cad_tipohospede_form" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="cad_tipohospede_form" aria-hidden="true">
+                            <div class="modal-dialog modal-md">
+                                <form action="{{url_for('cadastra_tipohospede')}}" method="post" autocomplete="off">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="cad_tipohospede_form_title">Cadastrar Tipo Hospede</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="col-12">
+                                                <div class="col-6 form_imput p-2 float-start">
+                                                    <label for="tipohospede" class="form-label float-start">Tipo Hospede:</label>
+                                                    <input required class="form-control form-control-md" id="tipohospede" type="text" name="tipohospede" placeholder="Tipo do Hospede">
+                                                </div>
+                                                <div class="form_imput p-2 float-start col-6">
+                                                    <label for="perdesconto" class="form-label float-start">% de desconto:</label>
+                                                    <input id="perdesconto" class="form-control form-control-md" type="number" step=".01" name="perdesconto" placeholder="15.00">
+                                                </div>
+                                                <div class="form_imput p-2 float-start col-6">
+                                                    <label for="valordesconto" class="form-label float-start">Valor desconto (R$):</label>
+                                                    <input id="valordesconto" class="form-control form-control-md" type="number" step=".01" name="valordesconto" placeholder="100.00">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancelar</button>
+                                            <input type="submit" class="btn btn-success" value="Cadastrar Tipo Hospede">
+                                        </div>
+                                    </div>
+                                </form>                            
+                            </div>
+                        </div>
+                    </div> 
+                </div>  
+            </div>
+            <div class="col-6 float-start p-2">
+                <div class="bloco_main col-12 p-2">
+                    <h4>Tipo Quarto</h4>
+                    <div class="col-12 bloco_config">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Tipo</th>
+                                    <th scope="col">% desc.</th>
+                                    <th scope="col">R$ desc.</th>
+                                    <th scope="col">qtd max</th>
+                                    <th scope="col">status</th>
+                                    <th scope="col">ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tipo_q in tipoquarto %}
+                                <tr>
+                                    <form action="{{url_for('atualiza_tipoquarto')}}" method="post">
+                                        <td>{{tipo_q['descricao']}}</td>
+                                        <td><input class="form-control form-control-md" type="number" name="perdesconto" step=".01" min="0" max="100" value="{{tipo_q['perdesconto']}}"></td>
+                                        <td><input class="form-control form-control-md" type="number" name="valordesconto" step=".01" min="0" max="9999" value="{{tipo_q['valordesconto']}}"></td>
+                                        <td><input class="form-control form-control-md" type="number" name="maxhospedes" min="0" max="10" value="{{tipo_q['maxhospedes']}}"></td>
+                                        <td>
+                                            <select class="form-control form-control-md" name="status">
+                                                <option {% if tipo_q['status'] == 'A'%}selected{%endif%} value="A">Ativo</option>
+                                                <option {% if tipo_q['status'] == 'I'%}selected{%endif%} value="I">Inativo</option>
+                                            </select>
+                                            <input type="hidden" name="id_tipoquarto" value="{{tipo_q['id_tipoquarto']}}">
+                                        </td>
+                                        <td><button type="submit" class="btn btn-success">Salvar</button></td>
+                                    </form>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-6 float-left">
+                        <!-- Button trigger modal -->
+                        <button type="button" class="btn btn-block btn-outline-dark" data-bs-toggle="modal" data-bs-target="#cad_tipoquarto_form">
+                            Novo Tipo Quarto
+                        </button>
+                        
+                        <!-- Modal -->
+                        <div class="modal fade" id="cad_tipoquarto_form" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="cad_tipoquarto_form" aria-hidden="true">
+                            <div class="modal-dialog modal-md">
+                                <form action="{{url_for('cadastra_tipoquarto')}}" method="post" autocomplete="off">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="cad_tipoquarto_form_title">Cadastrar Tipo Quarto</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="col-12">
+                                                <div class="col-6 form_imput p-2 float-start">
+                                                    <label for="tipoquarto" class="form-label float-start">Tipo quarto:</label>
+                                                    <input required class="form-control form-control-md" id="tipoquarto" type="text" name="tipoquarto" placeholder="Tipo do quarto">
+                                                </div>
+                                                <div class="form_imput p-2 float-start col-6">
+                                                    <label for="capacidade" class="form-label float-start">Capacidade:</label>
+                                                    <input id="capacidade" class="form-control form-control-md" type="text" name="capacidade" placeholder="capacidade">
+                                                </div>
+                                                <div class="form_imput p-2 float-start col-6">
+                                                    <label for="perdesconto" class="form-label float-start">% de desconto:</label>
+                                                    <input id="perdesconto" class="form-control form-control-md" type="number" step=".01" name="perdesconto" placeholder="15.00">
+                                                </div>
+                                                <div class="form_imput p-2 float-start col-6">
+                                                    <label for="valordesconto" class="form-label float-start">Valor desconto (R$):</label>
+                                                    <input id="valordesconto" class="form-control form-control-md" type="number" step=".01" name="valordesconto" placeholder="100.00">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancelar</button>
+                                            <input type="submit" class="btn btn-success" value="Cadastrar Tipo Quarto">
+                                        </div>
+                                    </div>
+                                </form>                            
+                            </div>
+                        </div>
+                    </div> 
+                </div>  
+            </div>
+            <div class="col-6 float-start p-2">
+                <div class="bloco_main col-12 p-2">
+                    <h4>Parametros</h4>
+                    <div class="col-12 bloco_config">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Parametro</th>
+                                    <th scope="col">valor</th>
+                                    <th scope="col">ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for parametro in parametros %}
+                                <tr>
+                                    <form action="{{url_for('atualiza_parametro')}}" method="post">
+                                        <td>{{parametro['descricao']}}</td>
+                                        <td>
+                                            <select class="form-control form-control-md" name="valor">
+                                                <option {% if parametro['valor'] == 'S'%}selected{%endif%} value="S">SIM</option>
+                                                <option {% if parametro['valor'] == 'N'%}selected{%endif%} value="N">NÃO</option>
+                                            </select>
+                                            <input type="hidden" name="id_parametro" value="{{parametro['id_parametro']}}">
+                                        </td>
+                                        <td><button type="submit" class="btn btn-success">Salvar</button></td>
+                                    </form>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>  
+            </div>
+            <div class="col-6 float-start p-2">
+                <div class="bloco_main col-12 p-2">
+                    <h4>Usuários</h4>
+                    <div class="col-12 bloco_config">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Usuário</th>
+                                    <th scope="col">Perfil</th>
+                                    <th scope="col">nível</th>
+                                    <th scope="col">ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usuario in usuarios %}
+                                <tr>
+                                    <form action="{{url_for('atualiza_usuario')}}" method="post">
+                                        <td>{{usuario['nome']}}</td>
+                                        <td>
+                                            <select class="form-control form-control-md" name="id_perfil">
+                                                {% for perfil in perfis %}
+                                                    <option {% if usuario['id_perfil'] == perfil['id_perfil']%}selected{%endif%} value="{{perfil['id_perfil']}}">{{perfil['descricao']}}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <input type="hidden" name="id_usuario" value="{{usuario['id_usuario']}}">
+                                        </td>
+                                        <td>
+                                            <select class="form-control form-control-md" name="nivelacesso">
+                                                <option {% if usuario['nivelacesso'] == 1%}selected{%endif%}>1</option>
+                                                <option {% if usuario['nivelacesso'] == 2%}selected{%endif%}>2</option>
+                                                <option {% if usuario['nivelacesso'] == 3%}selected{%endif%}>3</option>
+                                                <option {% if usuario['nivelacesso'] == 4%}selected{%endif%}>4</option>
+                                                <option {% if usuario['nivelacesso'] == 5%}selected{%endif%}>5</option>
+                                            </select>
+                                        </td>
+                                        <td><button type="submit" class="btn btn-success">Salvar</button></td>
+                                    </form>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-6 float-left">
+                        <!-- Button trigger modal -->
+                        <button type="button" class="btn btn-block btn-outline-dark" data-bs-toggle="modal" data-bs-target="#cad_usuario_form">
+                            Novo Usuário
+                        </button>
+                        
+                        <!-- Modal -->
+                        <div class="modal fade" id="cad_usuario_form" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="cad_usuario_form" aria-hidden="true">
+                            <div class="modal-dialog modal-md">
+                                <form action="{{url_for('cadastra_usuario')}}" method="post" autocomplete="off">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="cad_usuario_form_title">Cadastrar Usuário</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="col-12">
+                                                <div class="col-6 form_imput p-2 float-start">
+                                                    <label for="nome" class="form-label float-start">Username:</label>
+                                                    <input required class="form-control form-control-md" id="nome" type="text" name="nome" placeholder="nome.usuario">
+                                                </div>
+                                                <div class="form_imput p-2 float-start col-6">
+                                                    <label for="id_perfil" class="form-label float-start">Perfil:</label>
+                                                    <select class="form-control form-control-md" name="id_perfil" id="id_perfil">
+                                                        {% for perfil in perfis %}
+                                                            <option value="{{perfil['id_perfil']}}">{{perfil['descricao']}}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="form_imput p-2 float-start col-6">
+                                                    <label for="nivelacesso" class="form-label float-start">nivel de acesso:</label>
+                                                    <select class="form-control form-control-md" id="nivelacesso" name="nivelacesso">
+                                                        <option value="1">1</option>
+                                                        <option value="2">2</option>
+                                                        <option value="3">3</option>
+                                                        <option value="4">4</option>
+                                                        <option value="5">5</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-7 form_imput p-2 float-start">
+                                                    <label for="email" class="form-label float-start">email:</label>
+                                                    <input required class="form-control form-control-md" id="email" type="email" name="email" placeholder="email@noxp.com.br">
+                                                </div>
+                                                <div class="col-5 form_imput p-2 float-start">
+                                                    <label for="senha" class="form-label float-start">senha:</label>
+                                                    <input required class="form-control form-control-md" id="senha" type="password" name="senha" placeholder="***********">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancelar</button>
+                                            <input type="submit" class="btn btn-success" value="Cadastrar Usuário">
+                                        </div>
+                                    </div>
+                                </form>                            
+                            </div>
+                        </div>
+                    </div> 
+                </div>  
+            </div>
+            <div class="col-4 float-start p-2">
+                <div class="bloco_main col-12 p-2">
+                    <h4>Serviços</h4>
+                    <div class="col-12 bloco_config">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Serviço</th>
+                                    <th scope="col">Valor R$</th>
+                                    <th scope="col">ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for servico in servicos %}
+                                <tr>
+                                    <form action="{{url_for('atualiza_servico')}}" method="post">
+                                        <td>{{servico['descricao']}}</td>
+                                        <td>
+                                            <input required type="number" name="valor" value="{{servico['valor']}}" step=".01" min="0" class="form-control form-control-md" placeholder="100.00">
+                                            <input type="hidden" name="id_servico" value="{{servico['id_servico']}}">
+                                        </td>
+                                        <td><button type="submit" class="btn btn-success">Salvar</button></td>
+                                    </form>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-6 float-left">
+                        <!-- Button trigger modal -->
+                        <button type="button" class="btn btn-block btn-outline-dark" data-bs-toggle="modal" data-bs-target="#cad_servico_form">
+                            Novo Serviço
+                        </button>
+                        
+                        <!-- Modal -->
+                        <div class="modal fade" id="cad_servico_form" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="cad_servico_form" aria-hidden="true">
+                            <div class="modal-dialog modal-md">
+                                <form action="{{url_for('cadastra_servico')}}" method="post" autocomplete="off">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="cad_servico_form_title">Cadastrar Serviço</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="col-12">
+                                                <div class="col-6 form_imput p-2 float-start">
+                                                    <label for="servico" class="form-label float-start">Serviço:</label>
+                                                    <input required class="form-control form-control-md" id="servico" type="text" name="servico" placeholder="servico">
+                                                </div>
+                                                <div class="form_imput p-2 float-start col-6">
+                                                    <label for="valor" class="form-label float-start">valor R$</label>
+                                                    <input required id="valor" type="number" name="valor" step=".01" min="0" class="form-control form-control-md" placeholder="100.00">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancelar</button>
+                                            <input type="submit" class="btn btn-success" value="Cadastrar Perfil">
+                                        </div>
+                                    </div>
+                                </form>                            
+                            </div>
+                        </div>
+                    </div> 
+                </div>  
+            </div>
+            <div class="col-8 float-start p-2">
+                <div class="bloco_main col-12 p-2">
+                    <h4>Logs</h4>
+                    <div class="col-12 bloco_config">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Evento</th>
+                                    <th scope="col">data</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                <tr>
+                                    <td class="text-start">{{log['descricao']}}</td>
+                                     <td>{{log['datacriacao']}}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>  
+            </div>
+        </section>
+    </main>
+    <footer class="col-12">
+    </footer>
+</body>
+</html>
