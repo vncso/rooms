@@ -2,7 +2,7 @@ blinker==1.6.2
 click==8.1.6
 Flask
 itsdangerous==2.1.2
-mysql
+psycopg2
 MarkupSafe
 packaging
 gunicorn
