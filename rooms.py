@@ -1,6 +1,6 @@
 import datetime
 from flask import Flask, render_template, Blueprint, flash, redirect, request, session, url_for, get_flashed_messages
-import mysql
+import psycopg2
 import sys
 import re
 from calendar import Calendar, monthrange
@@ -19,7 +19,7 @@ def valida_email(email):
 def conecta_bd():
 
     try:
-        conn = mysql.connect(
+        conn = psycopg2.connect(
             user="admin",
             password="021207",
             host="localhost",
@@ -27,8 +27,8 @@ def conecta_bd():
             database="rooms"
 
         )
-    except mysql.Error as e:
-        print(f"Error connecting to mysql Platform: {e}")
+    except psycopg2.Error as e:
+        print(f"Error connecting to psycopg2 Platform: {e}")
         sys.exit(1)
 
     return conn
