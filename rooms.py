@@ -25,7 +25,7 @@ def conecta_bd():
             user="admin",
             password="mwNrJeByza7ybqj53YBeuG6EkEzTRBjp",
             host="dpg-cjenbpme546c73f6p8rg-a",
-            port=3306,
+            port=5432,
             database="rooms_bvds"
 
         )
