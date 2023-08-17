@@ -142,7 +142,7 @@ def reservas_hospede(id_hospede):
 @app.route('/')
 def index():
     conn = conecta_bd()
-    cur = conn.cursor(dictionary=True)
+    cur = conn.cursor()
 
     """"
     cur.execute('select a.id_reserva, b.nome, c.nroquarto, a.datacheckin from rsv_reserva a '
