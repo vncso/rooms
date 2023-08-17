@@ -148,19 +148,26 @@ def index():
                 'inner join rsv_hospede b on a.id_hospede = b.id_hospede '
                 'inner join rsv_quarto c on a.id_quarto = c.id_quarto '
                 'where a.status = %s order by 1 desc', ('A',))
-    reservas = cur.fetchall()
-
+    rows = cur.fetchall()
+    reservas = {}
+    for reserva in rows:
+        reservas{'id_reserva': reserva[0],
+                 'nome': reserva[1],
+                 'nroquarto': reserva[2],
+                 'datacheckin': reserva[3]
+                }
+    """
     cur.execute('select a.id_hospedagem, b.nome, c.nroquarto, a.datacheckin from rsv_hospedagem a '
                 'inner join rsv_hospede b on a.id_hospede = b.id_hospede '
                 'inner join rsv_quarto c on a.id_quarto = c.id_quarto '
                 'where a.status = %s order by 1 desc', ('A',))
     hospedagens = cur.fetchall()
-
+    """
     hoje = datetime.date.today()
 
     mes_atual, ano_atual = hoje.month, hoje.year
 
-    return render_template('index.html', reservas=reservas, hospedagens=hospedagens,
+    return render_template('index.html', reservas=reservas, #hospedagens=hospedagens,
                            mes_atual=mes_atual, ano_atual=ano_atual)
 
 
