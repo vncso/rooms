@@ -144,6 +144,7 @@ def index():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
 
+    """"
     cur.execute('select a.id_reserva, b.nome, c.nroquarto, a.datacheckin from rsv_reserva a '
                 'inner join rsv_hospede b on a.id_hospede = b.id_hospede '
                 'inner join rsv_quarto c on a.id_quarto = c.id_quarto '
@@ -156,7 +157,7 @@ def index():
                  'nroquarto': reserva[2],
                  'datacheckin': reserva[3]
                 }
-    """
+
     cur.execute('select a.id_hospedagem, b.nome, c.nroquarto, a.datacheckin from rsv_hospedagem a '
                 'inner join rsv_hospede b on a.id_hospede = b.id_hospede '
                 'inner join rsv_quarto c on a.id_quarto = c.id_quarto '
@@ -167,7 +168,7 @@ def index():
 
     mes_atual, ano_atual = hoje.month, hoje.year
 
-    return render_template('index.html', reservas=reservas, #hospedagens=hospedagens,
+    return render_template('index.html', #reservas=reservas, #hospedagens=hospedagens,
                            mes_atual=mes_atual, ano_atual=ano_atual)
 
 
