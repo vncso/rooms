@@ -17,14 +17,16 @@ def valida_email(email):
 
 
 def conecta_bd():
+    # postgres://admin:mwNrJeByza7ybqj53YBeuG6EkEzTRBjp@dpg-cjenbpme546c73f6p8rg-a/rooms_bvds
+    
 
     try:
         conn = psycopg2.connect(
             user="admin",
-            password="021207",
-            host="localhost",
+            password="mwNrJeByza7ybqj53YBeuG6EkEzTRBjp",
+            host="dpg-cjenbpme546c73f6p8rg-a",
             port=3306,
-            database="rooms"
+            database="rooms_bvds"
 
         )
     except psycopg2.Error as e:
