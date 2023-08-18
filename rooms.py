@@ -1,6 +1,6 @@
 import datetime
 from flask import Flask, render_template, Blueprint, flash, redirect, request, session, url_for, get_flashed_messages
-import psycopg2
+import mariadb
 import sys
 import re
 from calendar import Calendar, monthrange
@@ -17,20 +17,18 @@ def valida_email(email):
 
 
 def conecta_bd():
-    # postgres://admin:mwNrJeByza7ybqj53YBeuG6EkEzTRBjp@dpg-cjenbpme546c73f6p8rg-a/rooms_bvds
-    
 
     try:
-        conn = psycopg2.connect(
-            user="admin",
-            password="mwNrJeByza7ybqj53YBeuG6EkEzTRBjp",
-            host="dpg-cjenbpme546c73f6p8rg-a",
-            port=5432,
-            database="rooms_bvds"
+        conn = mariadb.connect(
+            user="root",
+            password="nLJmOoF6VM9qBJkpozwa",
+            host="containers-us-west-151.railway.app",
+            port=7137,
+            database="rooms"
 
         )
-    except psycopg2.Error as e:
-        print(f"Error connecting to psycopg2 Platform: {e}")
+    except mariadb.Error as e:
+        print(f"Error connecting to MariaDB Platform: {e}")
         sys.exit(1)
 
     return conn
@@ -142,33 +140,25 @@ def reservas_hospede(id_hospede):
 @app.route('/')
 def index():
     conn = conecta_bd()
-    cur = conn.cursor()
+    cur = conn.cursor(dictionary=True)
 
-    """"
     cur.execute('select a.id_reserva, b.nome, c.nroquarto, a.datacheckin from rsv_reserva a '
                 'inner join rsv_hospede b on a.id_hospede = b.id_hospede '
                 'inner join rsv_quarto c on a.id_quarto = c.id_quarto '
                 'where a.status = %s order by 1 desc', ('A',))
-    rows = cur.fetchall()
-    reservas = {}
-    for reserva in rows:
-        reservas{'id_reserva': reserva[0],
-                 'nome': reserva[1],
-                 'nroquarto': reserva[2],
-                 'datacheckin': reserva[3]
-                }
+    reservas = cur.fetchall()
 
     cur.execute('select a.id_hospedagem, b.nome, c.nroquarto, a.datacheckin from rsv_hospedagem a '
                 'inner join rsv_hospede b on a.id_hospede = b.id_hospede '
                 'inner join rsv_quarto c on a.id_quarto = c.id_quarto '
                 'where a.status = %s order by 1 desc', ('A',))
     hospedagens = cur.fetchall()
-    """
+
     hoje = datetime.date.today()
 
     mes_atual, ano_atual = hoje.month, hoje.year
 
-    return render_template('index.html', #reservas=reservas, #hospedagens=hospedagens,
+    return render_template('index.html', reservas=reservas, hospedagens=hospedagens,
                            mes_atual=mes_atual, ano_atual=ano_atual)
 
 
