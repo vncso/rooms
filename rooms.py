@@ -1,6 +1,6 @@
 import datetime
 from flask import Flask, render_template, Blueprint, flash, redirect, request, session, url_for, get_flashed_messages
-import mariadb
+import mysql
 import sys
 import re
 from calendar import Calendar, monthrange
