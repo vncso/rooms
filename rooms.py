@@ -1,6 +1,7 @@
 import datetime
 from flask import Flask, render_template, Blueprint, flash, redirect, request, session, url_for, get_flashed_messages
-import mysql
+# import mariadb
+import mysql.connector
 import sys
 import re
 from calendar import Calendar, monthrange
@@ -19,7 +20,16 @@ def valida_email(email):
 def conecta_bd():
 
     try:
-        conn = mariadb.connect(
+        # conn = mariadb.connect(
+        #     user="admin",
+        #     password="021207",
+        #     host="localhost",
+        #     port=3306,
+        #     database="rooms"
+        #
+        # )
+
+        conn = mysql.connector.connect(
             user="root",
             password="nLJmOoF6VM9qBJkpozwa",
             host="containers-us-west-151.railway.app",
@@ -27,7 +37,8 @@ def conecta_bd():
             database="rooms"
 
         )
-    except mariadb.Error as e:
+
+    except mysql.Error as e:
         print(f"Error connecting to MariaDB Platform: {e}")
         sys.exit(1)
 
