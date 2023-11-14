@@ -1,11 +1,31 @@
-import datetime
-from flask import Flask, render_template, Blueprint, flash, redirect, request, session, url_for, get_flashed_messages
-# import mariadb
+import datetime, functools
+import hashlib
+
+from flask import (Flask, render_template, Blueprint, flash, redirect, request,
+                   session, url_for, get_flashed_messages)
+from werkzeug.security import check_password_hash, generate_password_hash
+import mariadb
 import mysql.connector
 import sys
 import re
 from calendar import Calendar, monthrange
 
+
+def login_required(user):
+    """
+        função para limitar o acesso as áreas restritas da plataforma (áreas que somente usuários logados podem acessar)
+        utilizamos as sessões criadas na função 'fazer login' para validar se o usuário está logado ou não.
+
+        se não estiver logado é redirecionado para a página de login.
+    """
+    @functools.wraps(user)
+    def secure_function(*args, **kwargs):
+        if "id_usuario" not in session:
+            flash('faça o login para acessar!', 'info')
+            return redirect(url_for('login'))
+        else:
+            return user(*args, **kwargs)
+    return secure_function
 
 def valida_email(email):
     # pass the regular expression
@@ -20,23 +40,23 @@ def valida_email(email):
 def conecta_bd():
 
     try:
-        # conn = mariadb.connect(
-        #     user="admin",
-        #     password="021207",
-        #     host="localhost",
-        #     port=3306,
-        #     database="rooms"
-        #
-        # )
-
-        conn = mysql.connector.connect(
-            user="root",
-            password="nLJmOoF6VM9qBJkpozwa",
-            host="containers-us-west-151.railway.app",
-            port=7137,
+        conn = mariadb.connect(
+            user="admin",
+            password="021207",
+            host="localhost",
+            port=3306,
             database="rooms"
 
         )
+
+        # conn = mysql.connector.connect(
+        #     user="root",
+        #     password="nLJmOoF6VM9qBJkpozwa",
+        #     host="containers-us-west-151.railway.app",
+        #     port=7137,
+        #     database="rooms"
+        #
+        # )
 
     except mysql.Error as e:
         print(f"Error connecting to MariaDB Platform: {e}")
@@ -44,6 +64,42 @@ def conecta_bd():
 
     return conn
 
+
+def valida_permissao(usuario, modulo, aplicativo):
+    conn = conecta_bd()
+    cur = conn.cursor(dictionary=True)
+
+    cur.execute('select a.nivelacesso as nivel_user, b.nivelacesso as nivel_perfil from ger_usuario a '
+                'inner join ger_perfil b on a.id_perfil = b.id_perfil '
+                'where a.id_usuario = %s ', (usuario,))
+    usuario = cur.fetchone()
+
+    cur.execute('select a.nivelacesso as nivel_app, b.nivelacesso as nivel_modulo from ger_app a '
+                'inner join ger_modulo b on a.id_modulo = b.id_modulo '
+                'where a.id_app = %s and a.id_modulo = %s', (aplicativo, modulo,))
+    app = cur.fetchone()
+
+    cur.execute('select nivelacesso from ger_modulo where id_modulo = %s', (modulo,))
+    mod = cur.fetchone()
+
+    nivel_user = int(usuario['nivel_user'])
+    nivel_perfil = int(usuario['nivel_perfil'])
+    nivel_app = int(app['nivel_app']) if aplicativo > 0 else aplicativo
+    nivel_modulo = int(app['nivel_modulo']) if aplicativo > 0 else int(mod['nivelacesso'])
+
+    acesso = False
+
+    if nivel_user >= nivel_app if aplicativo > 0 else 0 or nivel_user >= nivel_modulo:
+        print('liberado')
+        acesso = True
+    elif nivel_perfil >= nivel_app if aplicativo > 0 else 0 or nivel_perfil >= nivel_modulo:
+        print('liberado')
+        acesso = True
+    else:
+        print('acesso negado')
+        acesso = False
+
+    return acesso
 
 app = Flask(__name__)
 
@@ -62,11 +118,56 @@ def grava_log(descricao, usuario, app):
 
     conn.close()
 
+@app.post('/fazer_login')
+def fazer_login():
+
+    usuario = request.form.get('email')
+    senha = request.form.get('password')
+
+    conn = conecta_bd()
+    cur = conn.cursor(dictionary=True)
+
+    cur.execute('select a.* from ger_usuario a '
+                'where a.email = %s ', (usuario,))
+    usuario_login = cur.fetchone()
+
+    print('LOGIN AQUI')
+    print(str(hashlib.md5(senha.encode('utf-8'))))
+    print(usuario_login['senha'])
+
+    if str(hashlib.md5(senha.encode('utf-8')).hexdigest()) == usuario_login['senha']:
+        session.clear()
+        session['id_usuario'] = usuario_login['id_usuario']
+        session['nivel_usuario'] = usuario_login['nivelacesso']
+        return redirect(url_for('index'))
+    else:
+        flash('usuário ou senha incorretos', 'danger')
+        return redirect(url_for('login'))
+
+
+@app.route('/sair')
+def sair():
+    session.clear()
+    return redirect(url_for('login'))
+
+
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
 
 @app.route('/reservas')
+@login_required
 def reservas():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'], 2, 11)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso', 'info')
+        return redirect(url_for('index'))
 
     cur.execute('select a.id_reserva, b.nome, c.nroquarto, a.datacheckin from rsv_reserva a '
                 'inner join rsv_hospede b on a.id_hospede = b.id_hospede '
@@ -86,9 +187,6 @@ def reservas():
                 'where a.status = %s order by 1 desc', ('C',))
     reservas_canceladas = cur.fetchall()
 
-    print(reservas_canceladas)
-    print(reservas_finalizadas)
-
     conn.close()
 
     return render_template('reservas.html', reservas=reservas, reservas_finalizadas=reservas_finalizadas,
@@ -96,9 +194,17 @@ def reservas():
 
 
 @app.route('/hospedagens')
+@login_required
 def hospedagens():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 13)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('index'))
 
     cur.execute('select a.id_hospedagem, b.nome, c.nroquarto, a.datacheckin from rsv_hospedagem a '
                 'inner join rsv_hospede b on a.id_hospede = b.id_hospede '
@@ -126,9 +232,17 @@ def hospedagens():
                            hospedagens_pagamento=hospedagens_pagamento)
 
 @app.route('/reservas_hospede/<int:id_hospede>')
+@login_required
 def reservas_hospede(id_hospede):
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 11)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('index'))
 
     cur.execute('select a.id_hospedagem, b.nome, c.nroquarto, a.datacheckin from rsv_hospedagem a '
                 'inner join rsv_hospede b on a.id_hospede = b.id_hospede '
@@ -149,6 +263,7 @@ def reservas_hospede(id_hospede):
 
 
 @app.route('/')
+@login_required
 def index():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
@@ -174,9 +289,17 @@ def index():
 
 
 @app.route('/quartos')
+@login_required
 def quartos():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 6)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('index'))
 
     # lista de tipos de quarto utilizada no cadastro de novo quarto
     cur.execute('SELECT id_tipoquarto, descricao FROM rsv_tipoquarto')
@@ -198,12 +321,26 @@ def quartos():
 
 
 @app.route('/quarto/<int:id_quarto>')
+@login_required
 def quarto(id_quarto):
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 6)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('quartos'))
+
     cur.execute('SELECT * FROM rsv_quarto a '
                 'where a.id_quarto= %s', (id_quarto,))
     quarto = cur.fetchone()
+
+    cur.execute('select maxhospedes from rsv_tipoquarto where id_tipoquarto = %s', (quarto['id_tipoquarto'],))
+    maxhospedes = cur.fetchone()
+
+    capacidade = maxhospedes['maxhospedes'] if maxhospedes['maxhospedes'] else 0
 
     cur.execute('SELECT id_hospede, nome FROM rsv_hospede a '
                 'where a.status = %s', ('A',))
@@ -236,16 +373,25 @@ def quarto(id_quarto):
     hoje = datetime.datetime.today()
     return render_template('quarto.html', quarto=quarto, lista_tipo_quarto=lista_tipo_quarto,
                            hospedes=hospedes, hoje=hoje, data_minima_reserva=data_minima_reserva,
-                           ocupado=ocupado, historico=historico, mes_atual=mes_atual, ano_atual=ano_atual)
+                           ocupado=ocupado, historico=historico, mes_atual=mes_atual, ano_atual=ano_atual,
+                           capacidade=capacidade)
 
 
 @app.route('/hospedes')
+@login_required
 def hospedes(**kwargs):
     mensagens = get_flashed_messages(category_filter='danger')
     dados = request.args.to_dict()
 
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 8)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('index'))
 
     # lista de hospedes exibida na página
     cur.execute('SELECT distinct * FROM v_rsv_hospedes limit 50')
@@ -262,16 +408,25 @@ def hospedes(**kwargs):
 
     if len(mensagens) > 0:
         return render_template('hospedes.html', lista_hospedes=lista_hospedes,
-                               lista_tipo_hospede=lista_tipo_hospede, dados=dados)
+                               lista_tipo_hospede=lista_tipo_hospede, dados=dados, mes_atual=mes_atual,
+                               ano_atual=ano_atual)
     return render_template('hospedes.html', lista_hospedes=lista_hospedes,
                            lista_tipo_hospede=lista_tipo_hospede, dados=dados, mes_atual=mes_atual,
                            ano_atual=ano_atual)
 
 
 @app.route('/hospede/<int:id_hospede>')
+@login_required
 def hospede(id_hospede):
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    acesso = valida_permissao(session['id_usuario'] , 2 , 8)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('hospedes'))
+
     cur.execute('SELECT * FROM rsv_hospede a '
                 'inner join rsv_contatohospede b '
                 'on a.id_hospede = b.id_hospede '
@@ -282,8 +437,12 @@ def hospede(id_hospede):
     cur.execute('SELECT id_tipohospede, descricao FROM rsv_tipohospede')
     lista_tipo_hospede = cur.fetchall()
 
-    cur.execute('SELECT id_quarto, nroquarto FROM rsv_quarto')
+    cur.execute('SELECT id_quarto, nroquarto, capacidade FROM rsv_quarto WHERE status = "L"')
     quartos = cur.fetchall()
+
+    cur.execute('SELECT id_dependente, nome, ROWNUM() as number FROM rsv_dependente where id_hospede = %s',
+                (id_hospede,))
+    dependentes = cur.fetchall()
 
     data_minima_reserva = datetime.datetime.today() + datetime.timedelta(days=1)
     hoje = datetime.datetime.today()
@@ -303,13 +462,220 @@ def hospede(id_hospede):
 
     return render_template('hospede.html', hospede=hospede, lista_tipo_hospede=lista_tipo_hospede,
                            quartos=quartos, data_minima_reserva=data_minima_reserva, hoje=hoje,
-                           ocupado=ocupado, mes_atual=mes_atual, ano_atual=ano_atual)
+                           ocupado=ocupado, mes_atual=mes_atual, ano_atual=ano_atual, dependentes=dependentes)
+
+
+@app.route('/dependente/<int:id_dependente>')
+@login_required
+def dependente(id_dependente):
+    conn = conecta_bd()
+    cur = conn.cursor(dictionary=True)
+
+    acesso = valida_permissao(session['id_usuario'], 2, 10)
+    if not acesso:
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('hospedes'))
+
+    cur.execute('SELECT * FROM rsv_dependente a '
+                'where a.id_dependente = %s', (id_dependente,))
+    dependente = cur.fetchone()
+
+    # lista de tipos de hospede utilizada no cadastro do hospede
+    cur.execute('SELECT id_tipohospede, descricao FROM rsv_tipohospede')
+    lista_tipo_hospede = cur.fetchall()
+
+    cur.execute('SELECT id_quarto, nroquarto, capacidade FROM rsv_quarto WHERE status = "L"')
+    quartos = cur.fetchall()
+
+    cur.execute('SELECT id_dependente, nome, ROWNUM() as number FROM rsv_dependente where id_dependente = %s',
+                (id_dependente,))
+    dependentes = cur.fetchall()
+
+    data_minima_reserva = datetime.datetime.today() + datetime.timedelta(days=1)
+    hoje = datetime.datetime.today()
+
+    cur.execute('SELECT status FROM rsv_hospedagem a inner join rsv_hospdependente b '
+                'on a.id_hospedagem = b.id_hospedagem '
+                'where b.id_dependente = %s and '
+                'status = %s ',
+                (id_dependente, 'A'))
+
+    ocupado = cur.fetchone()
+    ocupado = len(ocupado if ocupado != None else '')
+
+    cur.execute('SELECT a.*, b.nroquarto, c.nome FROM rsv_hospedagem a inner join rsv_quarto b on '
+                'a.id_quarto = b.id_quarto inner join rsv_hospede c on '
+                'a.id_hospede = c.id_hospede where a.id_hospede = %s and a.status = %s',
+                (dependente['id_hospede'], 'A'))
+    hospedagem_titular = cur.fetchall()
+
+    conn.close()
+
+    hoje = datetime.date.today()
+
+    mes_atual, ano_atual = hoje.month, hoje.year
+
+    return render_template('dependente.html', dependente=dependente, lista_tipo_hospede=lista_tipo_hospede,
+                           quartos=quartos, data_minima_reserva=data_minima_reserva, hoje=hoje,
+                           ocupado=ocupado, mes_atual=mes_atual, ano_atual=ano_atual, dependentes=dependentes,
+                           hospedagem_titular=hospedagem_titular)
+
+
+@app.post('/inclui_dependente_hospedagem')
+@login_required
+def inclui_dependente_hospedagem():
+    conn = conecta_bd()
+    cur = conn.cursor(dictionary=True)
+
+    if request.method == 'POST':
+        id_hospede = request.form.get('id_hospede')
+        id_dependente = request.form.get('id_dependente')
+        id_hospedagem = request.form.get('id_hospedagem')
+        id_quarto = request.form.get('id_quarto')
+        inclui = request.form.get('inclui')
+
+    if inclui == 0:
+        return redirect(url_for('dependentes', id_dependente=id_dependente))
+
+    acesso = valida_permissao(session['id_usuario'] , 2 , 10)
+    if not acesso:
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('hospede' , id_hospede=id_hospede))
+
+    # verifica se dependente já está hospedado
+    cur.execute('select * from rsv_hospdependente where id_hospedagem = %s and id_dependente = %s',
+                (id_hospedagem, id_dependente,))
+    dependente_hospedado = cur.fetchone()
+
+    dependente_hospedado = dependente_hospedado if dependente_hospedado else ''
+    if len(dependente_hospedado) > 0:
+        flash('esse dependente já está vinculado a essa hospedagem!', 'info')
+        return redirect(url_for('dependente' , id_dependente=id_dependente))
+
+    # verifica capacidade do quarto
+    cur.execute('select count(id_dependente) from rsv_hospdependente where id_hospedagem = %s',
+                (id_hospedagem,))
+    hospedados = cur.fetchone()
+    hospedados = len(hospedados) + 1
+
+    cur.execute('select id_tipoquarto from rsv_quarto where id_quarto = %s', (id_quarto,))
+    quarto = cur.fetchone()
+
+    print(quarto)
+
+    cur.execute('select maxhospedes from rsv_tipoquarto where id_tipoquarto = %s', (quarto['id_tipoquarto'],))
+    capacidade = cur.fetchone()
+
+    if int(hospedados) >= capacidade['maxhospedes']:
+        flash('capacidade do quarto atingida, não é possível hospedar.', 'info')
+        return redirect(url_for('dependente', id_dependente=id_dependente))
+
+    cur.execute('insert into rsv_hospdependente(id_hospedagem, id_dependente) values(%s, %s)' ,
+                (id_hospedagem , id_dependente ,))
+
+    conn.commit()
+    conn.close()
+    flash('Dependente vinculado a hospedagem com sucesso')
+    return redirect(url_for('dependente', id_dependente=id_dependente))
+
+
+@app.post('/cadastra_dependente')
+@login_required
+def cadastra_dependente():
+    conn = conecta_bd()
+    cur = conn.cursor()
+
+    if request.method == 'POST':
+        id_hospede = request.form.get('id_hospede')
+        nome = request.form.get('nome')
+        datanasc = request.form.get('datanasc')
+        parentesco = request.form.get('parentesco')
+        isento = request.form.get('isento')
+        pertaxa = request.form.get('pertaxa')
+        valortaxa = request.form.get('valortaxa')
+        datacriacao = datetime.datetime.now()
+        usucriacao = 'admin'
+        status = 'A'
+
+        # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 10)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('hospede' , id_hospede=id_hospede))
+
+    cur.execute("insert into rsv_dependente(id_hospede, nome, datanasc, status, parentesco, isento, valortaxa,"
+                "pertaxa, datacriacao, usuariocriacao) values(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s )",
+                (id_hospede, nome, datanasc, status, parentesco, isento, valortaxa, pertaxa, datacriacao, usucriacao,))
+
+    conn.commit()
+    conn.close()
+
+    grava_log(f'Dependente "{nome}" cadastrado com sucesso! {usucriacao}', usucriacao, 10)
+
+    flash(f'Dependente "{nome}" cadastrado com sucesso!', 'success')
+
+    return redirect(url_for('hospede', id_hospede=id_hospede))
+
+
+@app.post('/atualiza_dependente')
+@login_required
+def atualiza_dependente():
+    conn = conecta_bd()
+    cur = conn.cursor(dictionary=True)
+
+    cur.execute('select nome from ger_usuario where id_usuario = %s', (session['id_usuario'],))
+    usuario = cur.fetchone()
+
+    if request.method == 'POST':
+        id_dependente = request.form.get('id_dependente')
+        nome = request.form.get('nome')
+        datanasc = request.form.get('datanasc')
+        parentesco = request.form.get('parentesco')
+        isento = request.form.get('isento')
+        pertaxa = request.form.get('pertaxa')
+        valortaxa = request.form.get('valortaxa')
+        dataalteracao = datetime.datetime.now()
+        usualteracao = usuario['nome']
+        status = 'A'
+
+        # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 10)
+    if not acesso:
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso', 'info')
+        return redirect(url_for('dependente' , id_dependente=id_dependente))
+
+    cur.execute("update rsv_dependente set nome = %s, datanasc = %s, status = %s, parentesco = %s, "
+                "isento = %s, valortaxa = %s, "
+                "pertaxa = %s, dataalteracao = %s, usuarioalteracao = %s where id_dependente = %s",
+                (nome, datanasc, status, parentesco, isento, valortaxa, pertaxa, dataalteracao,
+                usualteracao, id_dependente,))
+
+    conn.commit()
+    conn.close()
+
+    grava_log(f'Dependente "{nome}" alterado com sucesso!' , usualteracao, 10)
+
+    flash(f'Dependente "{nome}" alterado com sucesso!', 'success')
+
+    return redirect(url_for('dependente', id_dependente=id_dependente))
 
 
 @app.post('/cadastra_hospede')
+@login_required
 def cadastra_hospede():
     conn = conecta_bd()
     cur = conn.cursor()
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 8)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('hospedes'))
 
     if request.method == 'POST':
         nome = request.form.get('nome')
@@ -479,9 +845,17 @@ def cadastra_hospede():
 
 
 @app.post('/cadastra_quarto')
+@login_required
 def cadastra_quarto():
     conn = conecta_bd()
     cur = conn.cursor()
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 6)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('quartos'))
 
     if request.method == 'POST':
         numero = request.form.get('numero')
@@ -519,9 +893,17 @@ def cadastra_quarto():
 
 
 @app.post('/cadastra_tipoquarto')
+@login_required
 def cadastra_tipoquarto():
     conn = conecta_bd()
     cur = conn.cursor()
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 14)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
 
     if request.method == 'POST':
         tipoquarto = request.form.get('tipoquarto')
@@ -546,9 +928,17 @@ def cadastra_tipoquarto():
 
 
 @app.post('/cadastra_tipohospede')
+@login_required
 def cadastra_tipohospede():
     conn = conecta_bd()
     cur = conn.cursor()
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 7)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
 
     if request.method == 'POST':
         tipohospede = request.form.get('tipohospede')
@@ -572,9 +962,17 @@ def cadastra_tipohospede():
 
 
 @app.post('/cadastra_perfil')
+@login_required
 def cadastra_perfil():
     conn = conecta_bd()
     cur = conn.cursor()
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 1 , 18)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
 
     if request.method == 'POST':
         perfil = request.form.get('perfil')
@@ -593,9 +991,17 @@ def cadastra_perfil():
     return redirect(url_for('configuracoes'))
 
 @app.post('/cadastra_servico')
+@login_required
 def cadastra_servico():
     conn = conecta_bd()
     cur = conn.cursor()
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 1 , 15)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
 
     if request.method == 'POST':
         servico = request.form.get('servico')
@@ -616,9 +1022,17 @@ def cadastra_servico():
 
 
 @app.post('/cadastra_usuario')
+@login_required
 def cadastra_usuario():
     conn = conecta_bd()
     cur = conn.cursor()
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 1 , 19)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
 
     if request.method == 'POST':
         nome = request.form.get('nome')
@@ -641,14 +1055,22 @@ def cadastra_usuario():
 
 
 @app.post('/atualiza_quarto')
+@login_required
 def atualiza_quarto():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
 
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 6)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('quartos'))
+
     if request.method == 'POST':
         id_quarto = request.form.get('id_quarto')
         numero = request.form.get('numero')
-        capacidade = request.form.get('capacidade')
+        #capacidade = request.form.get('capacidade')
         tipoquarto = request.form.get('tipoquarto')
         valor = request.form.get('valor')
         dataalteracao = datetime.datetime.now()
@@ -664,6 +1086,11 @@ def atualiza_quarto():
 
     cur.execute('select * from rsv_quarto where id_quarto = %s', (id_quarto,))
     quarto = cur.fetchone()
+
+    cur.execute('select maxhospedes from rsv_tipoquarto where id_tipoquarto = %s' , (quarto['id_tipoquarto'] ,))
+    maxhospedes = cur.fetchone()
+
+    capacidade = maxhospedes['maxhospedes'] if maxhospedes['maxhospedes'] else 0
 
     lista_alterados = []
 
@@ -711,9 +1138,17 @@ def atualiza_quarto():
 
 
 @app.post('/atualiza_hospede')
+@login_required
 def atualiza_hospede():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 8)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('hospedes'))
 
     if request.method == 'POST':
         id_hospede = request.form.get('id_hospede')
@@ -977,10 +1412,18 @@ def atualiza_hospede():
 
 
 @app.post('/inativa_hospede')
+@login_required
 def inativa_hospede():
 
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 8)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('hospedes'))
 
     id_hospede = request.form.get('id_hospede')
 
@@ -999,9 +1442,17 @@ def inativa_hospede():
     return redirect(url_for('hospedes'))
 
 @app.post('/ativa_hospede')
+@login_required
 def ativa_hospede():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 8)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('hospedes'))
 
     id_hospede = request.form.get('id_hospede')
 
@@ -1021,10 +1472,18 @@ def ativa_hospede():
 
 
 @app.route('/busca_hospede', methods=['GET','POST'])
+@login_required
 def busca_hospede():
     dados = request.args.to_dict()
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 8)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('hospedes'))
 
     nome = request.form.get('nome')
     codinterno = request.form.get('codinterno')
@@ -1059,10 +1518,20 @@ def busca_hospede():
 
 
 @app.route('/configuracoes')
+@login_required
 def configuracoes():
 
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 1 , 0)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('index'))
+
+    print(acesso)
 
     cur.execute('select * from ger_app')
     apps = cur.fetchall()
@@ -1072,6 +1541,14 @@ def configuracoes():
 
     cur.execute('select * from ger_parametro')
     parametros = cur.fetchall()
+
+    cur.execute('select valor from ger_parametro where descricao = "USA_PRECO_TIPO_HOSPEDE"')
+    precohospede = cur.fetchone()
+
+    cur.execute('select valor from ger_parametro where descricao = "USA_PRECO_TIPO_QUARTO"')
+    precoquarto = cur.fetchone()
+
+    print(precohospede)
 
     cur.execute('select * from ger_perfil')
     perfis = cur.fetchall()
@@ -1099,14 +1576,23 @@ def configuracoes():
 
     return render_template('configuracoes.html', apps=apps, modulos=modulos, parametros=parametros,
                            perfis=perfis, logs=logs, tipohospede=tipohospede, tipoquarto=tipoquarto,
-                           usuarios=usuarios, servicos=servicos, mes_atual=mes_atual, ano_atual=ano_atual)
+                           usuarios=usuarios, servicos=servicos, mes_atual=mes_atual, ano_atual=ano_atual,
+                           precohospede=precohospede, precoquarto=precoquarto)
 
 
 @app.route('/financeiro')
+@login_required
 def financeiro():
 
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 3 , 0)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('index'))
 
     cur.execute('select * from fin_pagamento order by 1 desc')
     pagamentos = cur.fetchall()
@@ -1138,9 +1624,17 @@ def financeiro():
 
 
 @app.post('/atualiza_modulo')
+@login_required
 def atualiza_modulo():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 1 , 21)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
 
     id_modulo = request.form.get('id_modulo')
     nivelacesso = request.form.get('nivelacesso')
@@ -1161,9 +1655,17 @@ def atualiza_modulo():
 
 
 @app.post('/atualiza_perfil')
+@login_required
 def atualiza_perfil():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 1 , 18)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
 
     id_perfil = request.form.get('id_perfil')
     nivelacesso = request.form.get('nivelacesso')
@@ -1184,9 +1686,17 @@ def atualiza_perfil():
 
 
 @app.post('/atualiza_servico')
+@login_required
 def atualiza_servico():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 1 , 15)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
 
     id_servico = request.form.get('id_servico')
     valor = request.form.get('valor')
@@ -1207,9 +1717,17 @@ def atualiza_servico():
 
 
 @app.post('/atualiza_parametro')
+@login_required
 def atualiza_parametro():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 1 , 22)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
 
     id_parametro = request.form.get('id_parametro')
     valor = request.form.get('valor')
@@ -1221,7 +1739,7 @@ def atualiza_parametro():
 
     conn.commit()
 
-    grava_log(f'alteado parâmetro {parametro["descricao"]} de {parametro["valor"]} para {valor}',
+    grava_log(f'alterado parâmetro {parametro["descricao"]} de {parametro["valor"]} para {valor}',
               'admin', 18)
 
     conn.close()
@@ -1230,9 +1748,17 @@ def atualiza_parametro():
 
 
 @app.post('/atualiza_usuario')
+@login_required
 def atualiza_usuario():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 1 , 19)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
 
     id_usuario = request.form.get('id_usuario')
     id_perfil = request.form.get('id_perfil')
@@ -1256,7 +1782,7 @@ def atualiza_usuario():
             'antigo': usuario['nivelacesso']
         })
 
-    cur.execute('update ger_usuario set id_perfil = %s, nivelacesso = %s,  where id_usuario = %s',
+    cur.execute('update ger_usuario set id_perfil = %s, nivelacesso = %s where id_usuario = %s',
                 (id_perfil, nivelacesso, id_usuario,))
 
     conn.commit()
@@ -1271,9 +1797,17 @@ def atualiza_usuario():
 
 
 @app.post('/atualiza_app')
+@login_required
 def atualiza_app():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 1 , 20)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
 
     id_app = request.form.get('id_app')
     nivelacesso = request.form.get('nivelacesso')
@@ -1295,13 +1829,22 @@ def atualiza_app():
 
 
 @app.post('/atualiza_tipohospede')
+@login_required
 def atualiza_tipohospede():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
 
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 7)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
+
     id_tipohospede = request.form.get('id_tipohospede')
     perdesconto = request.form.get('perdesconto')
     valordesconto = request.form.get('valordesconto')
+    valordiaria = request.form.get('valordiaria')
     status = request.form.get('status')
 
     cur.execute('select * from rsv_tipohospede where id_tipohospede = %s', (id_tipohospede,))
@@ -1327,9 +1870,16 @@ def atualiza_tipohospede():
             'novo': status,
             'antigo': tipo['status']
         })
+    if valordiaria != tipo['valordiaria']:
+        lista_alterados.append({
+            'campo': 'valordiaria',
+            'novo': valordiaria,
+            'antigo': tipo['valordiaria']
+        })
 
-    cur.execute('update rsv_tipohospede set perdesconto = %s, valordesconto = %s, '
-                'status = %s where id_tipohospede = %s', (perdesconto, valordesconto, status, id_tipohospede,))
+    cur.execute('update rsv_tipohospede set perdesconto = %s, valordesconto = %s, valordiaria = %s, '
+                'status = %s where id_tipohospede = %s',
+                (perdesconto, valordesconto, valordiaria, status, id_tipohospede,))
 
     conn.commit()
 
@@ -1343,13 +1893,22 @@ def atualiza_tipohospede():
 
 
 @app.post('/atualiza_tipoquarto')
+@login_required
 def atualiza_tipoquarto():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
 
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 14)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
+
     id_tipoquarto= request.form.get('id_tipoquarto')
     perdesconto = request.form.get('perdesconto')
     valordesconto = request.form.get('valordesconto')
+    valordiaria = request.form.get('valordiaria')
     maxhospedes = request.form.get('maxhospedes')
     status = request.form.get('status')
 
@@ -1382,10 +1941,16 @@ def atualiza_tipoquarto():
             'novo': maxhospedes,
             'antigo': tipo['maxhospedes']
         })
+    if valordiaria != tipo['valordiaria']:
+        lista_alterados.append({
+            'campo': 'valordiaria',
+            'novo': valordiaria,
+            'antigo': tipo['valordiaria']
+        })
 
-    cur.execute('update rsv_tipoquarto set perdesconto = %s, valordesconto = %s, '
+    cur.execute('update rsv_tipoquarto set perdesconto = %s, valordesconto = %s, valordiaria = %s, '
                 'status = %s, maxhospedes = %s where id_tipoquarto = %s',
-                (perdesconto, valordesconto, status, maxhospedes, id_tipoquarto,))
+                (perdesconto, valordesconto, valordiaria, status, maxhospedes, id_tipoquarto,))
 
     conn.commit()
 
@@ -1399,26 +1964,58 @@ def atualiza_tipoquarto():
 
 
 @app.post('/cria_reserva')
+@login_required
 def cria_reserva():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 11)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação para criar reservas. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('index'))
 
     id_quarto = request.form.get('id_quarto')
     nroquarto = request.form.get('nroquarto')
     id_hospede = request.form.get('id_hospede')
     datacheckin = request.form.get('datacheckin')
     datacheckout = request.form.get('datacheckout')
+    dp1 = int(request.form.get('dependente1') if request.form.get('dependente1') else 0)
+    dp2 = int(request.form.get('dependente2') if request.form.get('dependente2') else 0)
+    dp3 = int(request.form.get('dependente3') if request.form.get('dependente3') else 0)
+    dp4 = int(request.form.get('dependente4') if request.form.get('dependente4') else 0)
+    dp5 = int(request.form.get('dependente5') if request.form.get('dependente5') else 0)
+    dp6 = int(request.form.get('dependente6') if request.form.get('dependente6') else 0)
     usuariocriacao = 'admin'
     datacriacao = datetime.datetime.now()
     origem_reserva = int(request.form.get('origem'))
+    dependentes = []
+
+    if dp1 > 0:
+        dependentes.append(dp1)
+    if dp2 > 0:
+        dependentes.append(dp2)
+    if dp3 > 0:
+        dependentes.append(dp3)
+    if dp4 > 0:
+        dependentes.append(dp4)
+    if dp5 > 0:
+        dependentes.append(dp5)
+    if dp6 > 0:
+        dependentes.append(dp6)
 
     if nroquarto is None:
-        cur.execute('select nroquarto from rsv_quarto where id_quarto = %s', (id_quarto,))
+        cur.execute('select nroquarto, capacidade, id_tipoquarto from rsv_quarto where id_quarto = %s', (id_quarto,))
         quarto = cur.fetchone()
         nroquarto = quarto['nroquarto']
 
+    cur.execute('select maxhospedes as capacidade from rsv_tipoquarto where id_tipoquarto = %s',
+                (quarto['id_tipoquarto'],))
+    diaria_tipoquarto = cur.fetchone()
+
     cur.execute('select * from rsv_reserva where id_quarto = %s '
-                'and ((datacheckin between %s and %s) or (datacheckout between %s and %s ))',
+                'and ((datacheckin between %s and %s) or (nvl(datacheckoutreal, datacheckout) between %s and %s ))',
                 (id_quarto, datacheckin, datacheckout, datacheckin, datacheckout))
     reserva = cur.fetchall()
 
@@ -1458,10 +2055,29 @@ def cria_reserva():
         elif origem_reserva == 2:
             return redirect(url_for('hospede', id_hospede=id_hospede))
 
+    capacidade = int(diaria_tipoquarto['capacidade']) if int(diaria_tipoquarto['capacidade']) > 0 else int(
+        quarto['capacidade'])
+
+    if len(dependentes) + 1 > capacidade:
+        flash('Não é possível criar a reserva, capacidade do quarto insuficiente' , 'danger')
+        conn.close()
+        if origem_reserva == 1:
+            return redirect(url_for('quarto' , id_quarto=id_quarto))
+        elif origem_reserva == 2:
+            return redirect(url_for('hospede' , id_hospede=id_hospede))
+
     cur.execute('insert into rsv_reserva(id_quarto, id_hospede, datacheckin, datacheckout, usuariocriacao, '
                 'datacriacao, status, id_hotel) values(%s, %s, %s, %s, %s, %s, %s, %s)',
                 (id_quarto, id_hospede, datacheckin, datacheckout, usuariocriacao, datacriacao,
                  'A', 1))
+
+    cur.execute('select id_reserva from rsv_reserva where id_reserva = LAST_INSERT_ID()')
+    novo_id_reserva = cur.fetchone()
+    print(novo_id_reserva['id_reserva'])
+
+    for dependente in dependentes:
+        cur.execute('insert into rsv_reservadependente(id_reserva, id_dependente) values(%s, %s)',
+                    (novo_id_reserva['id_reserva'], dependente,))
 
     conn.commit()
     cur.execute('select nome from rsv_hospede where id_hospede = %s', (id_hospede,))
@@ -1481,15 +2097,29 @@ def cria_reserva():
 
 
 @app.post('/cria_hospedagem')
+@login_required
 def cria_hospedagem():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 13)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('index'))
 
     id_quarto = request.form.get('id_quarto')
     nroquarto = request.form.get('nroquarto')
     id_hospede = request.form.get('id_hospede')
     id_reserva = request.form.get('id_reserva')
     datacheckout = request.form.get('datacheckout')
+    dp1 = int(request.form.get('dependente1') if request.form.get('dependente1') else 0)
+    dp2 = int(request.form.get('dependente2') if request.form.get('dependente2') else 0)
+    dp3 = int(request.form.get('dependente3') if request.form.get('dependente3') else 0)
+    dp4 = int(request.form.get('dependente4') if request.form.get('dependente4') else 0)
+    dp5 = int(request.form.get('dependente5') if request.form.get('dependente5') else 0)
+    dp6 = int(request.form.get('dependente6') if request.form.get('dependente6') else 0)
     usuariocriacao = 'admin'
     datacriacao = datetime.datetime.now()
     origem_reserva = int(request.form.get('origem'))
@@ -1497,9 +2127,23 @@ def cria_hospedagem():
     perdesconto_hospede = 0.0
     valordesconto_quarto = 0.0
     perdesconto_quarto = 0.0
-
     datacheckin = datetime.datetime.now()
     datacheckin = datacheckin.strftime('%Y-%m-%d')
+    dependentes = []
+
+    if dp1 > 0:
+        dependentes.append(dp1)
+    if dp2 > 0:
+        dependentes.append(dp2)
+    if dp3 > 0:
+        dependentes.append(dp3)
+    if dp4 > 0:
+        dependentes.append(dp4)
+    if dp5 > 0:
+        dependentes.append(dp5)
+    if dp6 > 0:
+        dependentes.append(dp6)
+
 
     if nroquarto is None:
         cur.execute('select nroquarto from rsv_quarto where id_quarto = %s', (id_quarto,))
@@ -1516,7 +2160,7 @@ def cria_hospedagem():
                     ('H', id_reserva, id_quarto, id_hospede))
 
     # busca dados do quarto
-    cur.execute('select id_quarto, nroquarto, valordiaria, id_tipoquarto '
+    cur.execute('select id_quarto, nroquarto, valordiaria, id_tipoquarto, capacidade '
                 'from rsv_quarto where id_quarto = %s', (id_quarto,))
     quarto = cur.fetchone()
 
@@ -1536,15 +2180,16 @@ def cria_hospedagem():
     tipohospede = cur.fetchone()
 
     # busca parametros para o calculo do valor da diaria
-    cur.execute('select id_parametro, valor from ger_parametro WHERE id_parametro in (%s, %s)', (4, 5,))
+    cur.execute('select id_parametro, descricao, valor from ger_parametro '
+                'WHERE descricao in (%s, %s)', ('USA_DESCONTO_HOSPEDE', 'USA_DESCONTO_QUARTO',))
     parametros = cur.fetchall()
 
     for parametro in parametros:
-        if parametro['id_parametro'] == 4 and parametro['valor'] == 'S':
+        if parametro['descricao'] == 'USA_DESCONTO_HOSPEDE' and parametro['valor'] == 'S':
             valordesconto_hospede = tipohospede['valordesconto']
             perdesconto_hospede = tipohospede['perdesconto']
 
-        if parametro['id_parametro'] == 5 and parametro['valor'] == 'S':
+        if parametro['descricao'] == 'USA_DESCONTO_QUARTO' and parametro['valor'] == 'S':
             valordesconto_quarto = tipoquarto['valordesconto']
             perdesconto_quarto = tipoquarto['perdesconto']
 
@@ -1554,7 +2199,41 @@ def cria_hospedagem():
     delta = d2 - d1
     diarias = delta.days + datetime.timedelta(days=1).days
 
-    valortotal = diarias * quarto['valordiaria']
+    valor_diaria = 0
+
+    cur.execute('select valordiaria, maxhospedes as capacidade from rsv_tipoquarto where id_tipoquarto = %s' ,
+                (hospedagem['id_tipoquarto'] ,))
+    diaria_tipoquarto = cur.fetchone()
+
+    cur.execute('select valordiaria from rsv_tipohospede where id_tipohospede = %s' ,
+                (hospedagem['id_tipohospede'] ,))
+    diaria_tipohospede = cur.fetchone()
+
+    cur.execute('select id_parametro, descricao, valor from ger_parametro '
+                'WHERE descricao in (%s, %s)' , ('USA_PRECO_TIPO_QUARTO' , 'USA_PRECO_TIPO_HOSPEDE' ,))
+    parametros = cur.fetchall()
+
+    diaria_tipohospede = float(diaria_tipohospede['valordiaria']) if diaria_tipohospede['valordiaria'] else 0
+    diaria_tipoquarto = float(diaria_tipoquarto['valordiaria']) if diaria_tipoquarto['valordiaria'] else 0
+
+    usa_preco_hospede = 'N'
+    usa_preco_quarto = 'N'
+
+    for parametro in parametros:
+        if parametro['descricao'] == 'USA_PRECO_TIPO_HOSPEDE':
+            usa_preco_hospede = parametro['valor']
+        elif parametro['descricao'] == 'USA_PRECO_TIPO_QUARTO':
+            usa_preco_quarto = parametro['valor']
+
+    if usa_preco_hospede == 'S' and diaria_tipohospede > 0:
+        valor_diaria = diaria_tipohospede
+    elif usa_preco_quarto == 'S' and diaria_tipoquarto > 0:
+        valor_diaria = diaria_tipoquarto
+    else:
+        valor_diaria = hospedagem['valor']
+
+    valortotal = diarias * valor_diaria
+
     valordesconto = 0.0
     if perdesconto_hospede > 0:
         valordesconto = valortotal * (perdesconto_hospede / 100)
@@ -1581,6 +2260,18 @@ def cria_hospedagem():
     print(f'RESERVA: {reserva}')
     print(f'DATAS: {datacheckin} {datacheckout}')
 
+    capacidade = int(diaria_tipoquarto['capacidade']) \
+        if int(diaria_tipoquarto['capacidade']) > 0 \
+        else int(quarto['capacidade'])
+
+    if len(dependentes) + 1 > capacidade:
+        flash('Não é possível hospedar, capacidade do quarto insuficiente' , 'danger')
+        conn.close()
+        if origem_reserva == 1:
+            return redirect(url_for('quarto' , id_quarto=id_quarto))
+        elif origem_reserva == 2:
+            return redirect(url_for('hospede' , id_hospede=id_hospede))
+
     if len(reserva) > 0:
         flash('Não é possível hospedar, existe uma reserva em espera para esse quarto na data selecionada', 'danger')
         conn.close()
@@ -1589,10 +2280,13 @@ def cria_hospedagem():
         elif origem_reserva == 2:
             return redirect(url_for('hospede', id_hospede=id_hospede))
 
-    cur.execute('select * from rsv_reserva where id_hospede = %s and status != %s '
-                'and ((%s between datacheckin and datacheckout) or (%s between datacheckin and datacheckout))',
-                (id_hospede, 'C', datacheckin, datacheckout))
+    cur.execute('select * from rsv_reserva where id_hospede = %s and status not in (%s, %s) '
+                'and ((%s between datacheckin and nvl(datacheckoutreal, datacheckout)) '
+                'or (%s between datacheckin and nvl(datacheckoutreal,datacheckout)))',
+                (id_hospede, 'C', 'F', datacheckin, datacheckout))
     reserva = cur.fetchall()
+
+    print(reserva)
 
     if len(reserva) > 0:
         flash('Esse Hospede tem uma reserva pendente entre essas datas, verifique', 'danger')
@@ -1621,7 +2315,15 @@ def cria_hospedagem():
                  'A', 1, diarias, quarto['valordiaria'], valordesconto, valortotal, 1,
                  id_reserva if int(id_reserva) > 0 else novo_id_reserva['id_reserva']))
 
+    cur.execute('select id_hospedagem from rsv_hospedagem where id_hospedagem = LAST_INSERT_ID()')
+    novo_id_hospedagem = cur.fetchone()
+    print(novo_id_hospedagem['id_hospedagem'])
+
     cur.execute('update rsv_quarto set status = %s where id_quarto = %s', ('O', id_quarto))
+
+    for dependente in dependentes:
+        cur.execute('insert into rsv_hospdependente(id_hospedagem, id_dependente) values(%s, %s)',
+                    (novo_id_hospedagem['id_hospedagem'], dependente,))
 
     conn.commit()
     cur.execute('select nome from rsv_hospede where id_hospede = %s', (id_hospede,))
@@ -1641,9 +2343,17 @@ def cria_hospedagem():
 
 
 @app.route('/hospedagem/<int:id_hospedagem>')
+@login_required
 def hospedagem(id_hospedagem):
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'], 2, 13)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('index'))
 
     cur.execute('select a.*, b.nroquarto, c.nome from rsv_hospedagem a '
                 'inner join rsv_quarto b on a.id_quarto = b.id_quarto '
@@ -1668,6 +2378,11 @@ def hospedagem(id_hospedagem):
     cur.execute('select id_pagamento from fin_pagamento where id_hospedagem = %s', (id_hospedagem,))
     pagamento = cur.fetchone()
 
+    cur.execute('select a.* from rsv_dependente a inner join rsv_hospdependente b '
+                'on a.id_dependente = b.id_dependente inner join rsv_hospedagem c '
+                'on c.id_hospedagem = b.id_hospedagem where c.id_hospedagem = %s' , (id_hospedagem,))
+    dependentes = cur.fetchall()
+
     id_reserva = id_reserva['id_reserva']
     if id_reserva == None:
         id_reserva = 0
@@ -1675,19 +2390,35 @@ def hospedagem(id_hospedagem):
     conn.close()
 
     return render_template('hospedagem.html', hospedagem=hospedagem, hoje=hoje, servicos=servicos,
-                           lista_servico=lista_servico, id_reserva=id_reserva, pagamento=pagamento)
+                           lista_servico=lista_servico, id_reserva=id_reserva, pagamento=pagamento, dependentes=dependentes)
 
 
 @app.route('/reserva/<int:id_reserva>')
+@login_required
 def reserva(id_reserva):
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
 
-    cur.execute('select a.*, b.nroquarto, c.nome, b.valordiaria as valor from rsv_reserva a '
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 11)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('index'))
+
+    cur.execute('select a.*, b.nroquarto, c.nome, b.valordiaria as valor, b.id_tipoquarto, c.id_tipohospede from rsv_reserva a '
                 'inner join rsv_quarto b on a.id_quarto = b.id_quarto '
                 'inner join rsv_hospede c on a.id_hospede = c.id_hospede '
                 'where id_reserva = %s', (id_reserva,))
     hospedagem = cur.fetchone()
+
+    cur.execute('select id_dependente from rsv_reservadependente where id_reserva = %s',
+                (id_reserva,))
+    dp_reserva = cur.fetchall()
+
+    if len(dp_reserva) < 6:
+        for i in range(0, 6 - len(dp_reserva)):
+            dp_reserva.append({'id_dependente': 0})
 
     hoje = datetime.datetime.today()
     data_minima_reserva = datetime.datetime.today() + datetime.timedelta(days=1)
@@ -1725,21 +2456,68 @@ def reserva(id_reserva):
                 (id_reserva,))
     servicos = cur.fetchall()
 
+    cur.execute('select a.* from rsv_dependente a inner join rsv_reservadependente b '
+                'on a.id_dependente = b.id_dependente inner join rsv_reserva c '
+                'on c.id_reserva = b.id_reserva where c.id_reserva = %s' , (id_reserva ,))
+    dependentes = cur.fetchall()
+
     cur.execute('select * from rsv_servico')
     lista_servico = cur.fetchall()
+
+    valor_diaria = 0
+
+    cur.execute('select valordiaria from rsv_tipoquarto where id_tipoquarto = %s' ,
+                (hospedagem['id_tipoquarto'],))
+    diaria_tipoquarto = cur.fetchone()
+
+    cur.execute('select valordiaria from rsv_tipohospede where id_tipohospede = %s' ,
+                (hospedagem['id_tipohospede'],))
+    diaria_tipohospede = cur.fetchone()
+
+    cur.execute('select id_parametro, descricao, valor from ger_parametro '
+                'WHERE descricao in (%s, %s)', ('USA_PRECO_TIPO_QUARTO', 'USA_PRECO_TIPO_HOSPEDE',))
+    parametros = cur.fetchall()
+
+    diaria_tipohospede = float(diaria_tipohospede['valordiaria']) if diaria_tipohospede['valordiaria'] else 0
+    diaria_tipoquarto = float(diaria_tipoquarto['valordiaria']) if diaria_tipoquarto['valordiaria'] else 0
+
+    usa_preco_hospede = 'N'
+    usa_preco_quarto = 'N'
+
+    for parametro in parametros:
+        if parametro['descricao'] == 'USA_PRECO_TIPO_HOSPEDE':
+            usa_preco_hospede = parametro['valor']
+        elif parametro['descricao'] == 'USA_PRECO_TIPO_QUARTO':
+            usa_preco_quarto = parametro['valor']
+
+    if usa_preco_hospede == 'S' and diaria_tipohospede > 0:
+        valor_diaria = diaria_tipohospede
+    elif usa_preco_quarto == 'S' and diaria_tipoquarto > 0:
+        valor_diaria = diaria_tipoquarto
+    else:
+        valor_diaria = hospedagem['valor']
 
     conn.close()
 
     return render_template('reserva.html', hospedagem=hospedagem, hoje=hoje, servicos=servicos,
                            lista_servico=lista_servico, diarias=diarias,
                            data_minima_reserva=data_minima_reserva, status_reserva=status_reserva,
-                           id_hospedagem=id_hospedagem)
+                           id_hospedagem=id_hospedagem, dp_reserva=dp_reserva, dependentes=dependentes,
+                           valor_diaria=valor_diaria)
 
 
 @app.post('/add_servico_hospedagem')
+@login_required
 def add_servico_hospedagem():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 15)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('index'))
 
     id_hospedagem = request.form.get('id_hospedagem')
     id_servico = request.form.get('id_servico')
@@ -1762,9 +2540,17 @@ def add_servico_hospedagem():
 
 
 @app.post('/exclui_servico')
+@login_required
 def exclui_servico():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 15)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
 
     id_servicohospedagem = request.form.get('id_servicohospedagem')
 
@@ -1789,9 +2575,17 @@ def exclui_servico():
 
 
 @app.post('/checkout')
+@login_required
 def checkout():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 13)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
 
     id_hospedagem = request.form.get('id_hospedagem')
 
@@ -1882,8 +2676,8 @@ def checkout():
     cur.execute('update rsv_quarto set status = %s where id_quarto= %s',
                 ('L', hospedagem['id_quarto'],))
 
-    cur.execute('update rsv_reserva set datacheckoutreal = %s where id_reserva = %s',
-                (datetime.datetime.now(), hospedagem['id_reserva'],))
+    cur.execute('update rsv_reserva set datacheckoutreal = %s, status = %s where id_reserva = %s',
+                (datetime.datetime.now(), 'F', hospedagem['id_reserva'],))
 
     conn.commit()
 
@@ -1896,9 +2690,17 @@ def checkout():
 
 
 @app.post('/cancela_reserva')
+@login_required
 def cancela_reserva():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 2 , 12)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('configuracoes'))
 
     id_reserva = request.form.get('id_reserva')
 
@@ -1918,9 +2720,17 @@ def cancela_reserva():
 
 
 @app.route('/pagamento/<int:id_pagamento>')
+@login_required
 def pagamento(id_pagamento):
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 3 , 1)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('financeiro'))
 
     # parametros
     cur.execute('select id_parametro, descricao, valor from ger_parametro where id_modulo = 3')
@@ -1968,9 +2778,17 @@ def pagamento(id_pagamento):
 
 
 @app.post('/baixa_pagamento')
+@login_required
 def baixa_pagamento():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
+
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 3 , 1)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('financeiro'))
 
     id_pagamento = request.form.get('id_pagamento')
     forma = request.form.get('forma')
@@ -1995,10 +2813,18 @@ def baixa_pagamento():
 
 
 @app.post('/estorna_pagamento')
+@login_required
 def estorna_pagamento():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
 
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 3 , 2)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('financeiro'))
+    
     id_pagamento = request.form.get('id_pagamento')
     motivo = request.form.get('motivo')
 
@@ -2022,11 +2848,19 @@ def estorna_pagamento():
 
 
 @app.post('/cancela_pagamento')
+@login_required
 def cancela_pagamento():
 
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
 
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 3 , 5)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('financeiro'))
+    
     id_pagamento = request.form.get('id_pagamento')
     motivo = request.form.get('motivo')
 
@@ -2047,10 +2881,18 @@ def cancela_pagamento():
 
 
 @app.post('/cadastra_forma_pagto')
+@login_required
 def cadastra_forma_pagto():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
 
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 3 , 3)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('financeiro'))
+    
     descricao = request.form.get('descricao')
     perdesconto = request.form.get('perdesconto')
     pertaxa = request.form.get('pertaxa')
@@ -2083,10 +2925,18 @@ def cadastra_forma_pagto():
 
 
 @app.post('/cadastra_condicao_pagto')
+@login_required
 def cadastra_condicao_pagto():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
 
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 3 , 4)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('financeiro'))
+    
     descricao = request.form.get('descricao')
     perdesconto = request.form.get('perdesconto')
     pertaxa = request.form.get('pertaxa')
@@ -2118,10 +2968,18 @@ def cadastra_condicao_pagto():
 
 
 @app.post('/atualiza_condicao_pagto')
+@login_required
 def atualiza_condicao_pagto():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
 
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 3 , 4)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('financeiro'))
+    
     id_condpagto = request.form.get('id_condpagto')
     perdesconto = request.form.get('perdesconto')
     pertaxa = request.form.get('pertaxa')
@@ -2176,10 +3034,18 @@ def atualiza_condicao_pagto():
 
 
 @app.post('/atualiza_forma_pagto')
+@login_required
 def atualiza_forma_pagto():
     conn = conecta_bd()
     cur = conn.cursor(dictionary=True)
 
+    # validação de nível de acesso do usuário
+    acesso = valida_permissao(session['id_usuario'] , 3 , 3)
+    if not acesso: 
+        conn.close()
+        flash('usuário sem acesso a aplicação. Verifique o nível de acesso' , 'info')
+        return redirect(url_for('financeiro'))
+    
     id_formapagto = request.form.get('id_formapagto')
     perdesconto = request.form.get('perdesconto')
     pertaxa = request.form.get('pertaxa')
@@ -2225,6 +3091,7 @@ def atualiza_forma_pagto():
 
 
 @app.route('/calendario/<int:mes>/<int:ano>')
+@login_required
 def calendario(mes, ano):
 
     meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -2325,3 +3192,4 @@ def calendario(mes, ano):
     return render_template('calendario.html', primeiro_dia_semana=primeiro_dia_semana,
                            dias=dias, mes=mes, mes_atual=meses[mes - 1], mes_ant=mes_ant, mes_pos=mes_pos,
                            ano=ano, ano_ant=ano - 1 if mes == 1 else ano, ano_pos=ano if mes < 12 else ano + 1)
+
