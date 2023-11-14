@@ -62,38 +62,54 @@
                     <h5>dados da hospedagem</h5>
                     <div class="col-12">
                         <div class="form_imput p-2 float-start col-6">
-                            <span class="text-left">Nº do quarto:</span>
+                            <span class="text-start">Nº do quarto:</span>
                             <input readonly class="form-control form-control-md" type="number" 
                             name="numero" min="0" placeholder="123" value="{{hospedagem['nroquarto']}}">
                         </div>
                         <div class="form_imput p-2 float-start col-6">
-                            <span class="text-left">Hospede:</span>
+                            <span class="text-start">Hospede:</span>
                             <input readonly class="form-control form-control-md" type="text" 
                             name="nome" value="{{hospedagem['nome']}}" placeholder="123">
                         </div>
                         <div class="form_imput p-2 float-start col-6">
-                            <span class="text-left">Checkin:</span>
+                            <span class="text-start">Checkin:</span>
                             <input readonly class="form-control form-control-md" type="date" 
                             name="datacheckin" value="{{hospedagem['datacheckin'].strftime('%Y-%m-%d')}}" placeholder="123">
                         </div>
                         <div class="form_imput p-2 float-start col-6">
-                            <span class="text-left">Checkout:</span>
+                            <span class="text-start col-12">Checkout:</span>
                             <input class="form-control form-control-md" type="date" 
                             name="datacheckout" value="{{hospedagem['datacheckout'].strftime('%Y-%m-%d')}}" 
                             min="{{hoje.strftime('%Y-%m-%d')}}">
                         </div>
+                        <div class="form_imput p-2 float-start col-12">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" class="text-start">Dependentes:</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for dependente in dependentes %}
+                                    <tr>
+                                        <td class="text-start">{{dependente['nome']}}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                         <div class="form_imput p-2 float-start col-4">
-                            <span class="text-left">valor diária:</span>
+                            <span class="text-start">valor diária:</span>
                             <input readonly class="form-control form-control-md" type="number" step=".01" 
                             name="valor" min="0" max="99999" value="{{hospedagem['valordiaria']}}" placeholder="R$100,00">
                         </div>
                         <div class="form_imput p-2 float-start col-4">
-                            <span class="text-left">Valor total:</span>
+                            <span class="text-start">Valor total:</span>
                             <input readonly class="form-control form-control-md" type="number" step=".01" 
                             name="valordesconto" min="0" max="99999" value="{{hospedagem['valortotal']}}" placeholder="R$100,00">
                         </div>
                         <div class="form_imput p-2 float-start col-4">
-                            <span class="text-left">Valor Desconto:</span>
+                            <span class="text-start">Valor Desconto:</span>
                             <input readonly class="form-control form-control-md" type="number" step=".01" 
                             name="valortotal" min="0" max="99999" value="{{hospedagem['valordesconto']}}" placeholder="R$100,00">
                         </div>

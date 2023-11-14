@@ -81,7 +81,23 @@
                             <span class="text-left">Checkout:</span>
                             <input {% if hospedagem['status'] != 'A' %} readonly {% endif %} class="form-control form-control-md" type="date" 
                             name="datacheckout" value="{{hospedagem['datacheckout'].strftime('%Y-%m-%d')}}" 
-                            min="{{data_minima_reserva.strftime('%Y-%m-%d')}}">
+                            min="{{data_minima_reserva.strftime('%Y-%m-%d')}}" id="dtacheckout_reserva" onchange="mudaDataCheckout()">
+                        </div>
+                        <div class="form_imput p-2 float-start col-12">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" class="text-start">Dependentes:</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for dependente in dependentes %}
+                                    <tr>
+                                        <td class="text-start">{{dependente['nome']}}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                         <div class="form_imput p-2 float-start col-4">
                             <span class="text-left">valor diária:</span>
@@ -91,7 +107,7 @@
                         <div class="form_imput p-2 float-start col-4">
                             <span class="text-left">Valor total:</span>
                             <input readonly class="form-control form-control-md" type="number" step=".01" 
-                            name="valordesconto" min="0" max="99999" value="{{hospedagem['valor'] * diarias}}" placeholder="R$100,00">
+                            name="valordesconto" min="0" max="99999" value="{{valor_diaria * diarias}}" placeholder="R$100,00">
                         </div>
                         <div class="form_imput p-2 float-start col-4">
                             <span class="text-left">Valor Desconto:</span>
@@ -105,7 +121,13 @@
                                 <input type="hidden" name="id_reserva" value="{{hospedagem['id_reserva']}}">
                                 <input type="hidden" name="id_quarto" value="{{hospedagem['id_quarto']}}"> 
                                 <input type="hidden" name="id_hospede" value="{{hospedagem['id_hospede']}}"> 
-                                <input type="hidden" name="datacheckout" value="{{hospedagem['datacheckout']}}"> 
+                                <input type="hidden" name="datacheckout" id="dtacheckout" value="{{hospedagem['datacheckout']}}">
+                                <input type="hidden" name="dependente1" value="{{dp_reserva[0]['id_dependente']}}">
+                                <input type="hidden" name="dependente2" value="{{dp_reserva[1]['id_dependente']}}">
+                                <input type="hidden" name="dependente3" value="{{dp_reserva[2]['id_dependente']}}">
+                                <input type="hidden" name="dependente4" value="{{dp_reserva[3]['id_dependente']}}">
+                                <input type="hidden" name="dependente5" value="{{dp_reserva[4]['id_dependente']}}">
+                                <input type="hidden" name="dependente6" value="{{dp_reserva[5]['id_dependente']}}">
                                 <input type="hidden" name="origem" value="2">  
                                 <button {% if hospedagem['status'] != 'A' %} disabled {% endif %} type="submit" class="btn btn-lg btn-success">
                                     Fazer o Check-in
@@ -195,5 +217,12 @@
     </main>
     <footer class="col-12">
     </footer>
+    <script>
+        function mudaDataCheckout(){
+            var campo = document.getElementById("dtacheckout_reserva");
+            var novo = document.getElementById("dtacheckout");
+            novo.value = campo.value;
+        }
+    </script>
 </body>
 </html>

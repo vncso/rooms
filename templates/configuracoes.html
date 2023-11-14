@@ -213,6 +213,9 @@
                                     <th scope="col">Tipo</th>
                                     <th scope="col">% desc.</th>
                                     <th scope="col">R$ desc.</th>
+                                    {% if precohospede['valor'] == 'S' %}
+                                        <th scope="col">R$ diária</th>
+                                    {% endif %}
                                     <th scope="col">status</th>
                                     <th scope="col">ações</th>
                                 </tr>
@@ -224,6 +227,9 @@
                                         <td>{{tipo_h['descricao']}}</td>
                                         <td><input class="form-control form-control-md" type="number" name="perdesconto" step=".01" min="0" max="100" value="{{tipo_h['perdesconto']}}"></td>
                                         <td><input class="form-control form-control-md" type="number" name="valordesconto" step=".01" min="0" max="9999" value="{{tipo_h['valordesconto']}}"></td>
+                                        {% if precohospede['valor'] == 'S' %}
+                                            <td><input class="form-control form-control-md" type="number" name="valordiaria" step=".01" min="0" max="9999" value="{{tipo_h['valordiaria']}}"></td>
+                                        {% endif %}
                                         <td>
                                             <select class="form-control form-control-md" name="status">
                                                 <option {% if tipo_h['status'] == 'A'%}selected{%endif%} value="A">Ativo</option>
@@ -290,6 +296,9 @@
                                     <th scope="col">Tipo</th>
                                     <th scope="col">% desc.</th>
                                     <th scope="col">R$ desc.</th>
+                                    {% if precoquarto['valor'] == 'S' %}
+                                        <th scope="col">R$ diária</th>
+                                    {% endif %}
                                     <th scope="col">qtd max</th>
                                     <th scope="col">status</th>
                                     <th scope="col">ações</th>
@@ -302,6 +311,9 @@
                                         <td>{{tipo_q['descricao']}}</td>
                                         <td><input class="form-control form-control-md" type="number" name="perdesconto" step=".01" min="0" max="100" value="{{tipo_q['perdesconto']}}"></td>
                                         <td><input class="form-control form-control-md" type="number" name="valordesconto" step=".01" min="0" max="9999" value="{{tipo_q['valordesconto']}}"></td>
+                                        {% if precoquarto['valor'] == 'S' %}
+                                            <td><input class="form-control form-control-md" type="number" name="valordiaria" step=".01" min="0" max="9999" value="{{tipo_q['valordiaria']}}"></td>
+                                        {% endif %}
                                         <td><input class="form-control form-control-md" type="number" name="maxhospedes" min="0" max="10" value="{{tipo_q['maxhospedes']}}"></td>
                                         <td>
                                             <select class="form-control form-control-md" name="status">
@@ -555,7 +567,7 @@
                                         </div>
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancelar</button>
-                                            <input type="submit" class="btn btn-success" value="Cadastrar Perfil">
+                                            <input type="submit" class="btn btn-success" value="Cadastrar Serviço">
                                         </div>
                                     </div>
                                 </form>                            
